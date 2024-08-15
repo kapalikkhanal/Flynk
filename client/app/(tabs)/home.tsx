@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { Image, StyleSheet, View, Text, ActivityIndicator, Dimensions } from 'react-native';
 import axios from 'axios';
+import { PanGestureHandler } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, useAnimatedGestureHandler, runOnJS } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -11,11 +13,15 @@ interface NewsItem {
     link: string;
 }
 
+const { width } = Dimensions.get('window');
+
 export default function Home() {
     const [news, setNews] = useState<NewsItem[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const translateX = useSharedValue(0);
 
     useEffect(() => {
         const fetchNews = async () => {
@@ -33,17 +39,30 @@ export default function Home() {
         fetchNews();
     }, []);
 
-    const goToNextNews = () => {
-        if (currentIndex < news.length - 1) {
-            setCurrentIndex(prevIndex => prevIndex + 1);
+    const handleSwipe = useAnimatedGestureHandler({
+        onActive: (event) => {
+            translateX.value = event.translationX;
+        },
+        onEnd: (event) => {
+            if (event.translationX > 50 && currentIndex > 0) {
+                translateX.value = withSpring(width, { damping: 20 }, () => {
+                    runOnJS(setCurrentIndex)(currentIndex - 1);
+                    translateX.value = 0;  // Reset translateX after index change
+                });
+            } else if (event.translationX < -50 && currentIndex < news.length - 1) {
+                translateX.value = withSpring(-width, { damping: 20 }, () => {
+                    runOnJS(setCurrentIndex)(currentIndex + 1);
+                    translateX.value = 0;  // Reset translateX after index change
+                });
+            } else {
+                translateX.value = withSpring(0);  // Reset translateX if swipe not significant
+            }
         }
-    };
+    });
 
-    const goToPreviousNews = () => {
-        if (currentIndex > 0) {
-            setCurrentIndex(prevIndex => prevIndex - 1);
-        }
-    };
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: translateX.value }]
+    }));
 
     if (loading) {
         return (
@@ -70,28 +89,24 @@ export default function Home() {
     }
 
     return (
-        <View style={styles.container}>
-            <Image
-                source={{ uri: news[currentIndex].imageUrl }}
-                style={styles.image}
-                resizeMode="cover"
-            />
-            <ThemedView style={styles.titleContainer}>
-                <ThemedText style={styles.title}>{news[currentIndex].title}</ThemedText>
-                <ThemedText type="link">
-                    <Text href={news[currentIndex].link} target="_blank" rel="noopener noreferrer">Read more</Text>
-                </ThemedText>
-            </ThemedView>
-            <View style={styles.navigationContainer}>
-                <TouchableOpacity onPress={goToPreviousNews} disabled={currentIndex === 0}>
-                    <ThemedText style={[styles.navButton, currentIndex === 0 && styles.disabledButton]}>Previous</ThemedText>
-                </TouchableOpacity>
-                <ThemedText style={styles.pageIndicator}>{`${currentIndex + 1} / ${news.length}`}</ThemedText>
-                <TouchableOpacity onPress={goToNextNews} disabled={currentIndex === news.length - 1}>
-                    <ThemedText style={[styles.navButton, currentIndex === news.length - 1 && styles.disabledButton]}>Next</ThemedText>
-                </TouchableOpacity>
-            </View>
-        </View>
+        <PanGestureHandler onGestureEvent={handleSwipe}>
+            <Animated.View style={[styles.container, animatedStyle]}>
+                <Image
+                    source={{ uri: news[currentIndex].imageUrl }}
+                    style={styles.image}
+                    resizeMode="cover"
+                />
+                <ThemedView style={styles.titleContainer}>
+                    <ThemedText style={styles.title}>{news[currentIndex].title}</ThemedText>
+                    <ThemedText type="link">
+                        <Text href={news[currentIndex].link} target="_blank" rel="noopener noreferrer">Read more</Text>
+                    </ThemedText>
+                </ThemedView>
+                <View style={styles.navigationContainer}>
+                    <ThemedText style={styles.pageIndicator}>{`${currentIndex + 1} / ${news.length}`}</ThemedText>
+                </View>
+            </Animated.View>
+        </PanGestureHandler>
     );
 }
 
@@ -119,18 +134,10 @@ const styles = StyleSheet.create({
     },
     navigationContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         alignItems: 'center',
         padding: 10,
         backgroundColor: 'rgba(0,0,0,0.5)',
-    },
-    navButton: {
-        fontSize: 18,
-        color: 'white',
-        padding: 10,
-    },
-    disabledButton: {
-        opacity: 0.5,
     },
     pageIndicator: {
         fontSize: 16,
