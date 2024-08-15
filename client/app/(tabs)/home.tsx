@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, View, Text, ActivityIndicator, Dimensions } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { Image, StyleSheet, View, Text, ActivityIndicator, Dimensions, Platform } from 'react-native';
 import axios from 'axios';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, useAnimatedGestureHandler, runOnJS } from 'react-native-reanimated';
+import AntDesign from '@expo/vector-icons/AntDesign';
+import FastImage from 'react-native-fast-image';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -11,9 +13,10 @@ interface NewsItem {
     title: string;
     imageUrl: string;
     link: string;
+    content: string;
 }
 
-const { width } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
 export default function Home() {
     const [news, setNews] = useState<NewsItem[]>([]);
@@ -21,7 +24,7 @@ export default function Home() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const translateX = useSharedValue(0);
+    const translateY = useSharedValue(0);
 
     useEffect(() => {
         const fetchNews = async () => {
@@ -41,27 +44,27 @@ export default function Home() {
 
     const handleSwipe = useAnimatedGestureHandler({
         onActive: (event) => {
-            translateX.value = event.translationX;
+            translateY.value = event.translationY;
         },
         onEnd: (event) => {
-            if (event.translationX > 50 && currentIndex > 0) {
-                translateX.value = withSpring(width, { damping: 20 }, () => {
+            if (event.translationY > 50 && currentIndex > 0) {
+                translateY.value = withSpring(height, { damping: 20 }, () => {
                     runOnJS(setCurrentIndex)(currentIndex - 1);
-                    translateX.value = 0;  // Reset translateX after index change
+                    translateY.value = 0;  // Reset translateY after index change
                 });
-            } else if (event.translationX < -50 && currentIndex < news.length - 1) {
-                translateX.value = withSpring(-width, { damping: 20 }, () => {
+            } else if (event.translationY < -50 && currentIndex < news.length - 1) {
+                translateY.value = withSpring(-height, { damping: 20 }, () => {
                     runOnJS(setCurrentIndex)(currentIndex + 1);
-                    translateX.value = 0;  // Reset translateX after index change
+                    translateY.value = 0;  // Reset translateY after index change
                 });
             } else {
-                translateX.value = withSpring(0);  // Reset translateX if swipe not significant
+                translateY.value = withSpring(0);  // Reset translateY if swipe not significant
             }
         }
     });
 
     const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateX: translateX.value }]
+        transform: [{ translateY: translateY.value }]
     }));
 
     if (loading) {
@@ -97,14 +100,10 @@ export default function Home() {
                     resizeMode="cover"
                 />
                 <ThemedView style={styles.titleContainer}>
-                    <ThemedText style={styles.title}>{news[currentIndex].title}</ThemedText>
-                    <ThemedText type="link">
-                        <Text href={news[currentIndex].link} target="_blank" rel="noopener noreferrer">Read more</Text>
-                    </ThemedText>
+                    <ThemedText type='title'>{news[currentIndex].title}</ThemedText>
+                    <ThemedText>{news[currentIndex].content}</ThemedText>
+                    <AntDesign className='absolute right-0 bottom-0 p-10' name="sharealt" size={24} color="white" />
                 </ThemedView>
-                <View style={styles.navigationContainer}>
-                    <ThemedText style={styles.pageIndicator}>{`${currentIndex + 1} / ${news.length}`}</ThemedText>
-                </View>
             </Animated.View>
         </PanGestureHandler>
     );
@@ -118,9 +117,14 @@ const styles = StyleSheet.create({
     image: {
         ...StyleSheet.absoluteFillObject,
     },
+    hiddenImage: {
+        width: 0,
+        height: 0,  // Hidden but preloaded
+    },
     titleContainer: {
         padding: 20,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        position:'relative'
     },
     title: {
         fontSize: 24,
@@ -137,10 +141,26 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: 10,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.8)',
     },
     pageIndicator: {
         fontSize: 16,
         color: 'white',
+    },
+    titleContainerMain: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    stepContainer: {
+        gap: 8,
+        marginBottom: 8,
+    },
+    reactLogo: {
+        height: 178,
+        width: 290,
+        bottom: 0,
+        left: 0,
+        position: 'absolute',
     },
 });

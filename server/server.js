@@ -2,22 +2,24 @@ const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const cors = require('cors');
+const cron = require('node-cron');
 
 const app = express();
 const PORT = 3001;
 
-app.use(cors());
-
 const url = 'https://www.hamropatro.com/';
+
+let newsData = [];
 
 async function scrapeNews() {
     try {
         const { data } = await axios.get(url);
         const $ = cheerio.load(data);
-        const newsData = [];
+        const articleUrls = [];
+        const news = [];
 
         // Adjust the selector to match the actual structure
-        $('.news-story-card').each((i, element) => {
+        $('.news-story-card').each(async (i, element) => {
             const newsCard = $(element);
             const title = newsCard.find('.news-story-card-text').text().trim();
             const link = newsCard.attr('href');
@@ -26,31 +28,70 @@ async function scrapeNews() {
             const imageUrlMatch = bgImageStyle.match(/url\((.*?)\)/);
             const imageUrl = imageUrlMatch ? imageUrlMatch[1] : '';
 
-            newsData.push({
+            // Extract ID from link
+            const idMatch = fullLink.match(/#(.+)$/);
+            const id = idMatch ? idMatch[1] : '';
+
+            articleUrls.push({
                 title,
                 link: fullLink,
-                imageUrl
+                imageUrl,
+                id
             });
         });
 
-        return newsData;
+        for (let article of articleUrls) {
+            const { title, link, imageUrl, id } = article;
+            // 
+            try {
+                const { data: articleData } = await axios.get(link);
+                const $article = cheerio.load(articleData);
+                const publishedDate = $article(`#${id} .news-published-date`).text().trim();
+                const articleText = $article(`#${id} .font-light.text-lg.text-justify.leading-loose`).text().trim();
+                const articleUrl = $article(`#${id} .source-items a`).first().attr('href') || '';
+
+                news.push({
+                    title,
+                    imageUrl,
+                    id,
+                    url: articleUrl,
+                    date: publishedDate,
+                    content: articleText
+                })
+            } catch (error) {
+                console.error(`Error fetching details for ${url}:`, error);
+            }
+        }
+
+        newsData = news;
     } catch (error) {
         console.error('Error fetching the website:', error);
         throw error; // Re-throw the error to be caught in the route handler
     }
 }
 
-app.get('/api/news', async (req, res) => {
+scrapeNews();
+
+// Schedule a cron job to fetch news every 5 minutes
+cron.schedule('*/5 * * * *', async () => {
     try {
-        const news = await scrapeNews();
-        if (news.length === 0) {
+        await scrapeNews();
+        console.log('News fetched and updated.');
+    } catch (error) {
+        console.error('Error in cron job:', error);
+    }
+});
+
+app.get('/api/news', (req, res) => {
+    try {
+        if (newsData.length === 0) {
             res.status(404).json({ message: 'No news found' });
         } else {
-            res.json(news);
+            res.json(newsData);
         }
     } catch (error) {
         console.error('Error fetching the news:', error);
-        res.status(500).json({ error: 'Failed to scrape news' });
+        res.status(500).json({ error: 'Failed to get news' });
     }
 });
 
