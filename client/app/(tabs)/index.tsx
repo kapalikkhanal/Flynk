@@ -158,12 +158,6 @@ export default function Home() {
     );
   }
 
-  const renderLoader = () => (
-    <View style={styles.centered}>
-      <ActivityIndicator size="large" color="#0000ff" />
-    </View>
-  );
-
   return (
     <SafeAreaView style={{ flex: 1 }}>
       {showWebView ? (

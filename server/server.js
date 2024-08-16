@@ -10,6 +10,7 @@ const PORT = 3001;
 const url = 'https://www.hamropatro.com/';
 
 let newsData = [];
+let rashifal = [];
 
 async function scrapeNews() {
     try {
@@ -17,6 +18,10 @@ async function scrapeNews() {
         const $ = cheerio.load(data);
         const articleUrls = [];
         const news = [];
+
+        const nepaliDate = $('.date .nep').text().trim();
+        const tithi = $('div[style="margin: 10px 0; color: white; font-size: 1.3rem"]').text().trim();
+        const panchanga = $('div[style="line-height: 1.9"]').text().replace('पञ्चाङ्ग:', '').trim();
 
         // Adjust the selector to match the actual structure
         $('.news-story-card').each(async (i, element) => {
@@ -56,7 +61,10 @@ async function scrapeNews() {
                     id,
                     url: articleUrl,
                     date: publishedDate,
-                    content: articleText
+                    content: articleText,
+                    nepaliDate,
+                    tithi,
+                    panchanga,
                 })
             } catch (error) {
                 console.error(`Error fetching details for ${url}:`, error);
@@ -70,10 +78,34 @@ async function scrapeNews() {
     }
 }
 
+async function scrapeRashifal() {
+    try {
+        const { data } = await axios.get('https://www.hamropatro.com/rashifal');
+        const $ = cheerio.load(data);
+
+        const rashifalData = [];
+
+        $('#rashifal .item').each((index, element) => {
+            const zodiacSign = $(element).find('h3').text().trim();
+            const description = $(element).find('.desc p').text().trim();
+
+            rashifalData.push({
+                sign: zodiacSign,
+                description: description,
+            });
+        });
+
+        rashifal = rashifalData;
+    } catch (error) {
+        console.error('Error scraping Rashifal data:', error.message);
+    }
+};
+
 scrapeNews();
+scrapeRashifal()
 
 // Schedule a cron job to fetch news every 5 minutes
-cron.schedule('*/5 * * * *', async () => {
+cron.schedule('*/15 * * * *', async () => {
     try {
         await scrapeNews();
         console.log('News fetched and updated.');
@@ -92,6 +124,19 @@ app.get('/api/news', (req, res) => {
     } catch (error) {
         console.error('Error fetching the news:', error);
         res.status(500).json({ error: 'Failed to get news' });
+    }
+});
+
+app.get('/api/rashifal', (req, res) => {
+    try {
+        if (rashifal.length === 0) {
+            res.status(404).json({ message: 'No Rashifal found' });
+        } else {
+            res.json(rashifal);
+        }
+    } catch (error) {
+        console.error('Error fetching the rashifal:', error);
+        res.status(500).json({ error: 'Failed to get rashifal' });
     }
 });
 
