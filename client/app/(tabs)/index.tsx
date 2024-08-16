@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Image, Button, StyleSheet, View, Text, ActivityIndicator, Dimensions, SafeAreaView } from 'react-native';
+import { Image, Share, StyleSheet, View, Text, ActivityIndicator, Dimensions, SafeAreaView, TouchableOpacity } from 'react-native';
 import axios from 'axios';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import Animated, {
@@ -23,6 +23,7 @@ interface NewsItem {
   url: string;
   content: string;
   date: string;
+  sourceImageUrl: string;
 }
 
 const { height, width } = Dimensions.get('window');
@@ -70,7 +71,7 @@ export default function Home() {
     if (showWebView) {
       setShowWebView(false);
     }
-    else{
+    else {
       navigation.navigate('home');
     }
   }, [showWebView, navigation]);
@@ -133,6 +134,21 @@ export default function Home() {
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }, { translateX: translateX.value }],
   }));
+
+  const shareNews = async (newsItem: NewsItem) => {
+    try {
+      await Share.share({
+        message: `${newsItem.title}\n${newsItem.content}\nRead more at: ${newsItem.url}`,
+      });
+    } catch (error) {
+      console.error('Error sharing news:', error);
+    }
+  };
+
+  const handleImagePress = (url: string) => {
+    setCurrentUrl(url);
+    setShowWebView(true);
+  };
 
   if (loading) {
     return (
@@ -204,10 +220,25 @@ export default function Home() {
                     <Text style={styles.title}>{item.title}</Text>
                     <Text style={styles.content}>{item.content}</Text>
                     <Text style={styles.date}>{item.date}</Text>
+                    <View style={styles.bubbleContainer}>
+                      {item.sourceImageUrl ? (
+                        <TouchableOpacity onPress={() => handleImagePress(item.url)}>
+                          <Image
+                            source={{ uri: item.sourceImageUrl }}
+                            style={styles.bubbleImage}
+                          />
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
                   </View>
+
                   <View style={styles.iconContainer}>
-                    <AntDesign className='pb-6' name="like2" size={36} color="gray" />
-                    <AntDesign className='pt-6' name="sharealt" size={36} color="gray" />
+                    <AntDesign
+                      name="sharealt"
+                      size={36}
+                      color="gray"
+                      onPress={() => shareNews(item)}
+                    />
                   </View>
                 </View>
               </Animated.View>
@@ -263,7 +294,7 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 44,
     right: 16,
     flexDirection: 'column',
     alignItems: 'center',
@@ -273,5 +304,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  bubbleContainer: {
+    marginTop: 10,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    overflow: 'hidden',
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: 'gray',
+    justifyContent: 'center',
+  },
+  bubbleImage: {
+    width: '100%',
+    height: '100%',
   },
 });

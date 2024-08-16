@@ -27,6 +27,7 @@ async function scrapeNews() {
         $('.news-story-card').each(async (i, element) => {
             const newsCard = $(element);
             const title = newsCard.find('.news-story-card-text').text().trim();
+            const sourceImageUrl = newsCard.find('.news-story-card-sources-wrapper img').first().attr('src') || '';
             const link = newsCard.attr('href');
             const fullLink = url + link;
             const bgImageStyle = newsCard.attr('style');
@@ -41,12 +42,13 @@ async function scrapeNews() {
                 title,
                 link: fullLink,
                 imageUrl,
-                id
+                id,
+                sourceImageUrl
             });
         });
 
         for (let article of articleUrls) {
-            const { title, link, imageUrl, id } = article;
+            const { title, link, imageUrl, id, sourceImageUrl } = article;
             // 
             try {
                 const { data: articleData } = await axios.get(link);
@@ -59,6 +61,7 @@ async function scrapeNews() {
                     title,
                     imageUrl,
                     id,
+                    sourceImageUrl,
                     url: articleUrl,
                     date: publishedDate,
                     content: articleText,

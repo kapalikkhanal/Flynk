@@ -69,20 +69,20 @@ const Dashboard: React.FC = () => {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [rashifal, setRashifal] = useState<RashifalItem[]>([]);
   const [showWebView, setShowWebView] = useState(false);
-  const [webViewUrl, setWebViewUrl] = useState<string | null>(null);
+  const [currentUrl, setCurrentUrl] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const logos = [
-    { id: 1, imageUrl: sourcesImages.Hamropatro, link: 'https://news1.com' },
-    { id: 2, imageUrl: sourcesImages.Kantipur, link: 'https://news2.com' },
-    { id: 3, imageUrl: sourcesImages.Onlinekhabar, link: 'https://news3.com' },
-    { id: 5, imageUrl: sourcesImages.Ratopati, link: 'https://news1.com' },
-    { id: 6, imageUrl: sourcesImages.Setopati, link: 'https://news2.com' },
-    { id: 7, imageUrl: sourcesImages.Himalkhabar, link: 'https://news3.com' },
-    { id: 8, imageUrl: sourcesImages.Barakhari, link: 'https://news3.com' },
-
+    { id: 1, imageUrl: sourcesImages.Hamropatro, link: 'https://www.hamropatro.com' },
+    { id: 2, imageUrl: sourcesImages.Kantipur, link: 'https://ekantipur.com' },
+    { id: 3, imageUrl: sourcesImages.Onlinekhabar, link: 'https://www.onlinekhabar.com' },
+    { id: 5, imageUrl: sourcesImages.Ratopati, link: 'https://www.ratopati.com' },
+    { id: 6, imageUrl: sourcesImages.Setopati, link: 'https://www.setopati.com' },
+    { id: 7, imageUrl: sourcesImages.Himalkhabar, link: 'https://www.himalkhabar.com' },
+    { id: 8, imageUrl: sourcesImages.Barakhari, link: 'https://baahrakhari.com' },
+    { id: 9, imageUrl: sourcesImages.Barakhari, link: 'https://news1.com' },
   ];
 
   const renderNewsItem = ({ item }: { item: NewsItem }) => (
@@ -153,79 +153,94 @@ const Dashboard: React.FC = () => {
   }
 
   const handleLogoClick = (url: string) => {
-    setWebViewUrl(url);
+    setCurrentUrl(url);
     setShowWebView(true);
   };
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <FlatList
-        data={[]}
-        renderItem={null}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <View style={styles.container}>
-            {/* Search Bar */}
-            <TextInput
-              style={styles.searchBar}
-              placeholder="Search news..."
-              value={searchText}
-              onChangeText={(text) => setSearchText(text)}
-            />
+      {showWebView ? (
+        <View style={{ flex: 1 }}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setShowWebView(false)}
+          >
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
+          <WebView
+            source={{ uri: currentUrl }}
+            style={{ flex: 1 }}
+          />
+        </View>
+      ) : (
+        <FlatList
+          data={[]}
+          renderItem={null}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <View style={styles.container}>
+              {/* Search Bar */}
+              <TextInput
+                style={styles.searchBar}
+                placeholder="Search news..."
+                value={searchText}
+                onChangeText={(text) => setSearchText(text)}
+              />
 
-            {/* Display today's date */}
-            <View style={styles.dateContainer}>
-              <Text style={styles.dateHeading}>{news[0].nepaliDate}</Text>
-              <View style={styles.tithiContainer}>
-                <Text style={styles.dateText}>{news[0].tithi}, </Text>
-                <Text style={styles.dateText}>{news[0].panchanga}</Text>
+              {/* Display today's date */}
+              <View style={styles.dateContainer}>
+                <Text style={styles.dateHeading}>{news[0].nepaliDate}</Text>
+                <View style={styles.tithiContainer}>
+                  <Text style={styles.dateText}>{news[0].tithi}, </Text>
+                  <Text style={styles.dateText}>{news[0].panchanga}</Text>
+                </View>
               </View>
-            </View>
 
-            {/* Top News Section */}
-            <View style={styles.trendingSection}>
-              <Text style={styles.sectionTitle}>Latest News</Text>
+              {/* Top News Section */}
+              <View style={styles.trendingSection}>
+                <Text style={styles.sectionTitle}>Latest News</Text>
+                <FlatList
+                  data={news}
+                  renderItem={renderNewsItem}
+                  keyExtractor={(item) => item.url}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.trendingNewsList}
+                />
+              </View>
+
+              {/* Horizontal Scroll Bar with Bubbles */}
               <FlatList
-                data={news}
-                renderItem={renderNewsItem}
-                keyExtractor={(item) => item.url}
+                data={logos}
+                renderItem={({ item: logo }) => (
+                  <TouchableOpacity
+                    key={logo.id}
+                    onPress={() => handleLogoClick(logo.link)}
+                    style={styles.logoBubble}
+                  >
+                    <Image source={logo.imageUrl} style={styles.logoImage} />
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item.id.toString()}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.trendingNewsList}
+                contentContainerStyle={styles.logoScrollView}
               />
-            </View>
 
-            {/* Horizontal Scroll Bar with Bubbles */}
-            <FlatList
-              data={logos}
-              renderItem={({ item: logo }) => (
-                <TouchableOpacity
-                  key={logo.id}
-                  onPress={() => handleLogoClick(logo.link)}
-                  style={styles.logoBubble}
-                >
-                  <Image source={logo.imageUrl} style={styles.logoImage} />
-                </TouchableOpacity>
-              )}
-              keyExtractor={(item) => item.id.toString()}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.logoScrollView}
-            />
-
-            {/* Rashifal Section */}
-            <View style={styles.rashifalSection}>
-              <Text style={styles.sectionTitle}>Today's Rashifal</Text>
-              <FlatList
-                data={rashifal}
-                renderItem={renderRashifalItem}
-                keyExtractor={(item) => item.sign}
-                showsVerticalScrollIndicator={false}
-              />
+              {/* Rashifal Section */}
+              <View style={styles.rashifalSection}>
+                <Text style={styles.sectionTitle}>Today's Rashifal</Text>
+                <FlatList
+                  data={rashifal}
+                  renderItem={renderRashifalItem}
+                  keyExtractor={(item) => item.sign}
+                  showsVerticalScrollIndicator={false}
+                />
+              </View>
             </View>
-          </View>
-        }
-      />
+          }
+        />
+      )}
     </SafeAreaView>
 
   );
@@ -376,5 +391,16 @@ const styles = StyleSheet.create({
   rashifalText: {
     fontSize: 16,
     color: '#FAF9F6',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 10,
+    zIndex: 1,
+  },
+  closeButtonText: {
+    color: '#fff',
   },
 });
