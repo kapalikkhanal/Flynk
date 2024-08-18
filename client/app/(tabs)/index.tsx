@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Image, Share, StyleSheet, View, Text, ActivityIndicator, Dimensions, SafeAreaView, TouchableOpacity } from 'react-native';
+import { Image, Share, Button, StyleSheet, Alert, View, Text, ActivityIndicator, Dimensions, SafeAreaView, TouchableOpacity } from 'react-native';
 import axios from 'axios';
-import { PanGestureHandler } from 'react-native-gesture-handler';
+import { PanGestureHandler, ScrollView } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -13,6 +13,7 @@ import Animated, {
 import AntDesign from '@expo/vector-icons/AntDesign';
 import WebView from 'react-native-webview';
 import { useNavigation } from '@react-navigation/native';
+import { Audio } from 'expo-av';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -46,8 +47,9 @@ export default function Home() {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const response = await axios.get('http://192.168.101.6:3001/api/news');
+        const response = await axios.get('https://flynk.onrender.com/api/news');
         setNews(response.data);
+        // console.log(response.data)
       } catch (error) {
         console.error('Error fetching news:', error);
         setError('Failed to fetch news');
@@ -67,14 +69,14 @@ export default function Home() {
     }
   }, [news, currentIndex]);
 
-  const handleRightSwipe = useCallback(() => {
-    if (showWebView) {
-      setShowWebView(false);
-    }
-    else {
-      navigation.navigate('home');
-    }
-  }, [showWebView, navigation]);
+  // const handleRightSwipe = useCallback(() => {
+  //   if (showWebView) {
+  //     setShowWebView(false);
+  //   }
+  //   else {
+  //     navigation.navigate('home');
+  //   }
+  // }, [showWebView, navigation]);
 
   useAnimatedReaction(
     () => isLeftSwipe.value,
@@ -86,47 +88,48 @@ export default function Home() {
     }
   );
 
-  useAnimatedReaction(
-    () => isRightSwipe.value,
-    (swipeRight) => {
-      if (swipeRight) {
-        runOnJS(handleRightSwipe)();
-        isRightSwipe.value = false;
-      }
-    }
-  );
+  // useAnimatedReaction(
+  //   () => isRightSwipe.value,
+  //   (swipeRight) => {
+  //     if (swipeRight) {
+  //       runOnJS(handleRightSwipe)();
+  //       isRightSwipe.value = false;
+  //     }
+  //   }
+  // );
 
   const handleSwipe = useAnimatedGestureHandler({
     onActive: (event) => {
       translateY.value = event.translationY;
-      translateX.value = event.translationX;
+      // translateX.value = event.translationX;
     },
     onEnd: (event) => {
       translateY.value = 0;
-      translateX.value = 0;
-      if (event.translationX < -50) {
-        isLeftSwipe.value = true;
-        translateY.value = 0;
-        translateX.value = 0;
-      } else if (event.translationX > 50) {
-        isRightSwipe.value = true;
-        translateY.value = 0;
-        translateX.value = 0;
-      } else if (event.translationY > 50 && currentIndex > 0) {
+      // translateX.value = 0;
+      // if (event.translationX < -50) {
+      //   isLeftSwipe.value = true;
+      //   translateY.value = 0;
+      //   translateX.value = 0;
+      // } else if (event.translationX > 50) {
+      //   isRightSwipe.value = true;
+      //   translateY.value = 0;
+      //   translateX.value = 0;
+      // } 
+      if (event.translationY > 50 && currentIndex > 0) {
         translateY.value = withSpring(height, { damping: 20 }, () => {
           runOnJS(setCurrentIndex)(currentIndex - 1);
           translateY.value = 0;
-          translateX.value = 0;
+          // translateX.value = 0;
         });
       } else if (event.translationY < -50 && currentIndex < news.length - 1) {
         translateY.value = withSpring(-height, { damping: 20 }, () => {
           runOnJS(setCurrentIndex)(currentIndex + 1);
           translateY.value = 0;
-          translateX.value = 0;
+          // translateX.value = 0;
         });
       } else {
         translateY.value = withSpring(0);
-        translateX.value = withSpring(0);
+        // translateX.value = withSpring(0);
       }
     }
   });
@@ -174,6 +177,56 @@ export default function Home() {
     );
   }
 
+  const fetchAudio = async (text) => {
+    const apiKey = '773e319b7a7946abbedb93634e2270db'; // Replace with your Voice RSS API key
+    const url = `https://api.voicerss.org/?key=${apiKey}&hl=hi-in&src=${encodeURIComponent(text)}`;
+
+    try {
+      const response = await fetch(url, { method: 'GET' });
+
+      if (!response.ok) {
+        // Log detailed error information
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch audio: ${errorText}`);
+      }
+
+      const audioBlob = await response.blob();
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      return new Promise((resolve, reject) => {
+        reader.onloadend = () => {
+          resolve(reader.result);
+        };
+        reader.onerror = reject;
+      });
+    } catch (error) {
+      console.error('Error fetching audio:', error);
+      throw error;
+    }
+  };
+
+  const speakText = async (texts) => {
+    try {
+      for (const text of texts) {
+        const base64Audio = await fetchAudio(text);
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: base64Audio }
+        );
+        await sound.playAsync();
+        await new Promise((resolve) => {
+          sound.setOnPlaybackStatusUpdate((status) => {
+            if (status.didJustFinish) {
+              resolve();
+            }
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Error with TTS:', error);
+      Alert.alert('Error', `Failed to play audio.`);
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
       {showWebView ? (
@@ -183,6 +236,12 @@ export default function Home() {
           activeOffsetY={[-30, 30]}
         >
           <Animated.View style={{ flex: 1 }}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowWebView(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
             <WebView
               source={{ uri: currentUrl }}
               style={{ flex: 1 }}
@@ -229,6 +288,13 @@ export default function Home() {
                           />
                         </TouchableOpacity>
                       ) : null}
+                    </View>
+
+                    <View>
+                      <Button
+                        title="Speak"
+                        onPress={() => speakText([item.title, item.content])}
+                      />
                     </View>
                   </View>
 
@@ -319,5 +385,17 @@ const styles = StyleSheet.create({
   bubbleImage: {
     width: '100%',
     height: '100%',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 36,
+    right: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 10,
+    zIndex: 1,
+  },
+  closeButtonText: {
+    color: '#fff',
   },
 });

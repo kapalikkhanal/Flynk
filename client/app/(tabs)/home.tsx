@@ -106,7 +106,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const response = await axios.get('http://192.168.101.6:3001/api/news');
+        const response = await axios.get('https://flynk.onrender.com/api/news');
         const topFiveNews = response.data.slice(0, 5);
         setNews(topFiveNews);
         // console.log(topFiveNews)
@@ -120,7 +120,7 @@ const Dashboard: React.FC = () => {
 
     const fetchRashifal = async () => {
       try {
-        const response = await axios.get('http://192.168.101.6:3001/api/rashifal');
+        const response = await axios.get('https://flynk.onrender.com/api/rashifal');
         setRashifal(response.data);
       } catch (error) {
         console.error('Error fetching rashifal:', error);
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#121212',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 32,
   },
   searchBar: {
     height: 50,
@@ -394,8 +394,9 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 10,
+    top: 36,
     right: 10,
+    borderRadius:10,
     backgroundColor: 'rgba(0,0,0,0.5)',
     padding: 10,
     zIndex: 1,
