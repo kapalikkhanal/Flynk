@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, SafeAreaView, Dimensions, Share, Text, Modal, StyleSheet, StatusBar } from 'react-native';
+import { View, SafeAreaView, Dimensions, FlatList, Share, Text, Modal, StyleSheet, StatusBar } from 'react-native';
 import axios from 'axios';
 import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import Animated, {

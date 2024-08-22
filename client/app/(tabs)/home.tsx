@@ -19,6 +19,8 @@ import WebView from 'react-native-webview';
 
 const { width } = Dimensions.get('window');
 
+const fallbackImage = require('../../assets/images/flynk_icon.png');
+
 const signImages = {
   मेष: require('../../assets/images/rashifal/mesh.png'),
   बृष: require('../../assets/images/rashifal/brish.png'),
@@ -47,7 +49,7 @@ const sourcesImages = {
 interface NewsItem {
   title: string;
   imageUrl: string;
-  url: string;
+  urls: string[];
   date: string;
   nepaliDate: string;
   tithi: string;
@@ -86,9 +88,21 @@ const Dashboard: React.FC = () => {
     { id: 9, imageUrl: sourcesImages.Barakhari, link: 'https://news1.com' },
   ];
 
-  const renderNewsItem = ({ item }: { item: NewsItem }) => (
-    <TouchableOpacity onPress={() => Linking.openURL(item.url)} style={styles.newsCard}>
-      <Image source={{ uri: item.imageUrl }} style={styles.newsImage} />
+  const renderNewsItem = ({ item, index }: { item: NewsItem; index: number }) => (
+    <TouchableOpacity
+      key={index}
+      onPress={() => Linking.openURL(item.urls[index])}
+      style={styles.newsCard}
+    >
+      <Image
+        source={{ uri: item.imageUrl }}
+        style={styles.newsImage}
+        resizeMode="cover"
+        defaultSource={fallbackImage}
+        onError={(e) => {
+          // console.log('Image failed to load:', item.imageUrl, e.nativeEvent.error);
+        }}
+      />
       <Text style={styles.newsTitle}>{item.title}</Text>
       <Text style={styles.publishedDate}>{item.date}</Text>
     </TouchableOpacity>
@@ -187,6 +201,7 @@ const Dashboard: React.FC = () => {
                 placeholder="Search news..."
                 value={searchText}
                 onChangeText={(text) => setSearchText(text)}
+                placeholderTextColor="white"
               />
 
               {/* Display today's date */}
@@ -204,7 +219,7 @@ const Dashboard: React.FC = () => {
                 <FlatList
                   data={news}
                   renderItem={renderNewsItem}
-                  keyExtractor={(item) => item.url}
+                  keyExtractor={(item) => item.id}
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.trendingNewsList}
@@ -259,7 +274,7 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     height: 50,
-    backgroundColor: '#333',
+    backgroundColor: 'gray',
     borderRadius: 10,
     paddingHorizontal: 16,
     fontSize: 16,
@@ -337,6 +352,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     padding: 12,
     color: '#fff',
+  },
+  fallbackImageContainer: {
+    height: '100%',
+    width: '100%'
   },
   dateContainer: {
     display: 'flex',

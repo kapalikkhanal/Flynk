@@ -14,6 +14,7 @@ import Animateds, {
     useAnimatedReaction,
 } from 'react-native-reanimated';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { supabase } from '../components/supabase'
 
 const { height, width } = Dimensions.get('window');
 
@@ -39,7 +40,7 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onImagePress, onSp
     const [isCommentModalVisible, setCommentModalVisible] = useState(false);
     const [comment, setComment] = useState('');
     const [liked, setLiked] = useState(false);
-    const [tts, setTts] = useState(false);
+    const [saved, setSaved] = useState(false);
     const scaleValue = useRef(new Animated.Value(1)).current;
 
     const modalTranslateY = useSharedValue(0);
@@ -67,9 +68,8 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onImagePress, onSp
         transform: [{ translateY: modalTranslateY.value }],
     }));
 
-
     const handleImageError = () => {
-        setImageUri(fallbackImage);
+        setImageUri(null);
     };
 
     const startAnimation = () => {
@@ -125,8 +125,25 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onImagePress, onSp
         ]).start();
     };
 
-    const handleTtsPress = () => {
-        setTts(!tts);
+    const handleSaved = () => {
+        setSaved(!saved);
+
+        // if (!saved) {
+        //     const { data, error } = await supabase
+        //         .from('flynk_saved')
+        //         .insert([
+        //             {
+        //                 created_date: new Date(),
+        //                 news_data: item, // Assuming `item` contains the entire news data you want to save
+        //             },
+        //         ]);
+
+        //     if (error) {
+        //         console.error('Error saving news:', error);
+        //     } else {
+        //         console.log('News saved successfully:', data);
+        //     }
+        // }
 
         Animated.sequence([
             Animated.spring(scaleValue, {
@@ -146,12 +163,21 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onImagePress, onSp
         <View style={styles.card}>
             <View style={styles.cardContent}>
                 <View style={styles.imageContainer}>
-                    <Animated.Image
-                        source={{ uri: imageUri }}
-                        style={[styles.image, animatedStyle]}
-                        resizeMode="cover"
-                        onError={handleImageError}
-                    />
+                    {imageUri ? (
+                        <Animated.Image
+                            source={{ uri: imageUri }}
+                            style={[styles.image, animatedStyle]}
+                            resizeMode="cover"
+                            onError={handleImageError}
+                        />
+                    ) : (
+                        <Animated.Image
+                            source={fallbackImage}
+                            style={[styles.fallbackImageContainer, animatedStyle]}
+                            resizeMode='contain'
+                            onError={handleImageError}
+                        />
+                    )}
                 </View>
                 <View className='h-1 bg-white w-full' />
                 <View style={styles.textContainer}>
@@ -170,23 +196,25 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onImagePress, onSp
                         ))}
                     </View>
                 </View>
-                <View className='absolute bottom-36 h-16 w-full flex flex-row justify-evenly items-center pb-2'>
+                <View className='absolute bottom-10 h-16 w-full flex flex-row justify-evenly items-center pb-2'>
 
-                    <TouchableOpacity className='p-3' onPress={handleTtsPress}>
+                    <TouchableOpacity className='p-3' onPress={() => onShare(item)}>
+                        <AntDesign name="sharealt" size={30} color="white" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity className='p-3' onPress={handleSaved}>
                         <Animated.View style={animatedStyle}>
-                            {tts ? (
-                                <MaterialCommunityIcons name="text-to-speech" size={36} color="white" />
+                            {saved ? (
+                                <MaterialCommunityIcons name="bookmark-box-multiple" size={30} color="white" />
                             ) : (
-                                <MaterialCommunityIcons name="text-to-speech-off" size={36} color="white" />
+                                <MaterialCommunityIcons name="bookmark-box-multiple-outline" size={30} color="white" />
                             )}
                         </Animated.View>
                     </TouchableOpacity>
 
-                    <AntDesign name="sharealt" size={36} color="white" onPress={() => onShare(item)} />
-
                     <TouchableOpacity className='p-3' onPress={handleCommentIconPress} >
                         <Animated.View style={animatedStyle}>
-                            <FontAwesome5 name="comment-alt" size={30} color="white" />
+                            <FontAwesome5 name="comment-alt" size={28} color="white" />
                         </Animated.View>
                     </TouchableOpacity>
                     <TouchableOpacity className='p-3' onPress={handleLikePress}>
@@ -251,6 +279,10 @@ const styles = StyleSheet.create({
     },
     imageContainer: {
         height: '36%',
+    },
+    fallbackImageContainer: {
+        height: '100%',
+        width: '100%'
     },
     image: {
         ...StyleSheet.absoluteFillObject,

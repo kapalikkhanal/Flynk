@@ -5,6 +5,7 @@ import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -14,7 +15,8 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-      }}>
+      }}
+    >
 
       <Tabs.Screen
         name="home"
@@ -31,6 +33,17 @@ export default function TabLayout() {
           title: 'News',
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon name={focused ? 'newspaper' : 'newspaper-outline'} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="saved"
+        options={{
+          title: 'Saved',
+          tabBarIcon: ({ color, focused }) => (
+            // <TabBarIcon name={focused ? 'settings' : 'settings-outline'} color={color} />
+            // <FontAwesome5 name={focused ? 'user-alt' : 'user'} size={20} style={[{ marginBottom: -3 }]} color={color} />
+            <MaterialCommunityIcons name={focused ? 'bookmark-box-multiple' : 'bookmark-box-multiple-outline'} size={25} style={[{ marginBottom: -3 }]} color={color} />
           ),
         }}
       />
