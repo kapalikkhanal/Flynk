@@ -27,12 +27,19 @@ async function scrapeNews() {
         $('.news-story-card').each(async (i, element) => {
             const newsCard = $(element);
             const title = newsCard.find('.news-story-card-text').text().trim();
-            const sourceImageUrl = newsCard.find('.news-story-card-sources-wrapper img').first().attr('src') || '';
             const link = newsCard.attr('href');
             const fullLink = url + link;
             const bgImageStyle = newsCard.attr('style');
             const imageUrlMatch = bgImageStyle.match(/url\((.*?)\)/);
             const imageUrl = imageUrlMatch ? imageUrlMatch[1] : '';
+
+            const sourceImages = [];
+            newsCard.find('.news-story-card-sources-wrapper img').each((i, imgElement) => {
+                const src = $(imgElement).attr('src');
+                if (src) {
+                    sourceImages.push(src);
+                }
+            });
 
             // Extract ID from link
             const idMatch = fullLink.match(/#(.+)$/);
@@ -41,9 +48,9 @@ async function scrapeNews() {
             articleUrls.push({
                 title,
                 link: fullLink,
-                imageUrl,
+                sourceImageUrl: sourceImages,
                 id,
-                sourceImageUrl
+                imageUrl,
             });
         });
 
@@ -55,14 +62,20 @@ async function scrapeNews() {
                 const $article = cheerio.load(articleData);
                 const publishedDate = $article(`#${id} .news-published-date`).text().trim();
                 const articleText = $article(`#${id} .font-light.text-lg.text-justify.leading-loose`).text().trim();
-                const articleUrl = $article(`#${id} .source-items a`).first().attr('href') || '';
+                const sourceUrls = [];
+                $article(`#${id} .source-items a`).each((index, element) => {
+                    const href = $article(element).attr('href');
+                    if (href) {
+                        sourceUrls.push(href);
+                    }
+                });
 
                 news.push({
                     title,
+                    sourceImageUrl,
                     imageUrl,
                     id,
-                    sourceImageUrl,
-                    url: articleUrl,
+                    urls: sourceUrls,
                     date: publishedDate,
                     content: articleText,
                     nepaliDate,
