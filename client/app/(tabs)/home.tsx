@@ -12,6 +12,7 @@ import {
   Dimensions,
   SafeAreaView,
   ActivityIndicator,
+  StatusBar
 } from 'react-native';
 import axios from 'axios';
 import WebView from 'react-native-webview';
@@ -158,7 +159,8 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
+      <StatusBar barStyle="light-content" backgroundColor="#252525" />
       {showWebView ? (
         <View style={{ flex: 1 }}>
           <TouchableOpacity
@@ -396,7 +398,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 36,
     right: 10,
-    borderRadius:10,
+    borderRadius: 10,
     backgroundColor: 'rgba(0,0,0,0.5)',
     padding: 10,
     zIndex: 1,

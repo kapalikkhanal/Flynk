@@ -40,7 +40,7 @@ export default function TabLayout() {
           title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
             // <TabBarIcon name={focused ? 'settings' : 'settings-outline'} color={color} />
-            <FontAwesome5 name={focused ? 'user-alt' : 'user'} size={28} style={[{ marginBottom: -3 }]} color={color} />
+            <FontAwesome5 name={focused ? 'user-alt' : 'user'} size={20} style={[{ marginBottom: -3 }]} color={color} />
           ),
         }}
       />
