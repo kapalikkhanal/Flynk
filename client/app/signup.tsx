@@ -121,7 +121,7 @@ const Signup = () => {
             </View>
             <TouchableOpacity
               className='mt-4'
-              onPress={() => navigation.navigate('index')}
+              onPress={() => navigation.navigate('login')}
             >
               <Text className='text-white/80 text-center text-base'>
                 Already have an account? <Text className='font-bold text-base text-yellow-600'>Sign In</Text>

@@ -1,177 +1,84 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, SafeAreaView, Dimensions, FlatList, Share, Text, Modal, StyleSheet, StatusBar } from 'react-native';
-import axios from 'axios';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Animated, Text, StyleSheet, Dimensions, ActivityIndicator, StatusBar, Modal, TouchableOpacity } from 'react-native';
+import NewsCard from '../components/newscard';
 import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
-import Animated, {
+import Animateds, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  useAnimatedGestureHandler,
+  withTiming,
   runOnJS,
-  useAnimatedReaction,
+  useAnimatedGestureHandler,
 } from 'react-native-reanimated';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
-
-
-import NewsCard from '../components/card';
-import LoadingScreen from '../components/loadingScreen';
-import ErrorScreen from '../components/errorScreen';
-import WebViewScreen from '../components/webView';
+import WebView from 'react-native-webview';
+import ProtectedRoute from '../components/ProtectedRoute';
 
 const { height, width } = Dimensions.get('window');
-const PRELOAD_COUNT = 3;
 
-export interface NewsItem {
-  imageUrl: string;
-  title: string;
-  content: string;
-  date: string;
-  sourceImageUrl?: string[];
-  urls: string[];
-  id: string;
-}
-
-export default function Home() {
-  const [allNews, setAllNews] = useState<NewsItem[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+const News: React.FC = () => {
+  const [newsData, setNewsData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+
   const [showWebView, setShowWebView] = useState(false);
   const [currentUrl, setCurrentUrl] = useState('');
-  const imageCache = useRef<{ [key: string]: string }>({});
+  const [webViewLoading, setWebViewLoading] = useState(false);
 
-  const navigation = useNavigation();
-
-  const translateY = useSharedValue(0);
-  const translateX = useSharedValue(0);
-  const opacity = useSharedValue(1);
-  const isLeftSwipe = useSharedValue(false);
-  const isRightSwipe = useSharedValue(false);
-  const isGestureActive = useSharedValue(false);
-  const animatedIndex = useSharedValue(0);
-
+  const scrollY = useRef(new Animated.Value(0)).current;
   const modalTranslateY = useSharedValue(0);
 
   useEffect(() => {
-    fetchNews();
+    const fetchData = async () => {
+      try {
+        const response = await fetch('https://flynk.onrender.com/api/news');
+        const data = await response.json();
+        setNewsData(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  const fetchNews = async () => {
-    try {
-      const response = await axios.get('https://flynk.onrender.com/api/news');
-      setAllNews(response.data);
-    } catch (error) {
-      setError('Failed to fetch news');
-    } finally {
-      setLoading(false);
-    }
+  const handleOpenWebView = useCallback((url) => {
+    setCurrentUrl(url);
+    setShowWebView(true);
+    setWebViewLoading(true);
+  }, []);
+
+  const handleCloseWebView = () => {
+    setShowWebView(false);
+    setCurrentUrl('');
   };
 
-  const handleLeftSwipe = useCallback(() => {
-    const currentNewsItem = allNews[currentIndex];
-    if (currentNewsItem && currentNewsItem.urls[0]) {
-      setCurrentUrl(currentNewsItem.urls[0]);
-      setShowWebView(true);
+  const openFirstSourceUrl = useCallback(() => {
+    if (newsData.length > 0) {
+      const firstUrl = newsData[0].source;
+      handleOpenWebView(firstUrl);
     }
-  }, [allNews, currentIndex]);
+  }, [newsData, handleOpenWebView]);
 
-  const handleRightSwipe = useCallback(() => {
-    navigation.navigate('home');
-  }, [navigation]);
+  const closeModal = useCallback(() => {
+    setShowWebView(false);
+  }, []);
 
-  useAnimatedReaction(
-    () => isLeftSwipe.value,
-    (swipeLeft) => {
-      if (swipeLeft) {
-        runOnJS(handleLeftSwipe)();
-        isLeftSwipe.value = false;
-      }
+  useEffect(() => {
+    if (!showWebView) {
+      modalTranslateY.value = withTiming(0, { duration: 300 });
     }
-  );
+  }, [showWebView, modalTranslateY]);
 
-  useAnimatedReaction(
-    () => isRightSwipe.value,
-    (swipeRight) => {
-      if (swipeRight) {
-        runOnJS(handleRightSwipe)();
-        isRightSwipe.value = false;
-      }
-    }
-  );
-
-  const handleSwipe = useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
-    onStart: () => {
-      isGestureActive.value = true;
-      translateX.value = 0;
-      translateY.value = 0;
-    },
-    onActive: (event) => {
-      const isHorizontal = Math.abs(event.translationX) > Math.abs(event.translationY);
-      translateX.value = 0;
-      translateY.value = 0;
-      if (isHorizontal) {
-        translateX.value = event.translationX;
-        translateY.value = 0;
-        opacity.value = 1 - Math.abs(event.translationX) / width;
-        isLeftSwipe.value = event.translationX < 0;
-        isRightSwipe.value = event.translationX > 0;
-      } else {
-        translateY.value = event.translationY;
-        translateX.value = 0;
-        opacity.value = 1 - Math.abs(event.translationY) / height;
-        isLeftSwipe.value = false;
-        isRightSwipe.value = false;
-      }
-    },
-    onEnd: (event) => {
-      isGestureActive.value = false;
-      if (isLeftSwipe.value) {
-        translateX.value = withSpring(-width * 0.5, { damping: 20 }, () => {
-          runOnJS(handleLeftSwipe)();
-          translateX.value = 0;
-          translateX.value = 0;
-          opacity.value = 1;
-        });
-      } else if (isRightSwipe.value) {
-        translateX.value = withSpring(width * 0.5, { damping: 20 }, () => {
-          runOnJS(handleRightSwipe)();
-          translateX.value = 0;
-          translateX.value = 0;
-          opacity.value = 1;
-        });
-      } else if (event.translationY > 50 && currentIndex > 0) {
-        translateY.value = withSpring(height, { damping: 20 }, () => {
-          runOnJS(setCurrentIndex)(currentIndex - 1);
-          animatedIndex.value = currentIndex - 1;
-          translateY.value = 0;
-          translateX.value = 0;
-          opacity.value = 1;
-        });
-      } else if (event.translationY < -50 && currentIndex < allNews.length - 1) {
-        translateY.value = withSpring(-height, { damping: 20 }, () => {
-          runOnJS(setCurrentIndex)(currentIndex + 1);
-          animatedIndex.value = currentIndex + 1;
-          translateY.value = 0;
-          translateX.value = 0;
-          opacity.value = 1;
-        });
-      } else {
-        translateY.value = withSpring(0);
-        translateX.value = withSpring(0);
-        opacity.value = withSpring(1);
-      }
-    },
-  });
 
   const handleModalSwipe = useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
     onActive: (event) => {
-      if (event.translationY > 0) {
-        modalTranslateY.value = event.translationY;
-      }
+      modalTranslateY.value = event.translationY > 0 ? event.translationY : 0;
     },
     onEnd: (event) => {
-      if (event.translationY > 100) {
-        runOnJS(setShowWebView)(false);
+      if (event.translationY > height * 0.25) {
+        modalTranslateY.value = withTiming(height, { duration: 300 }, () => {
+          runOnJS(closeModal)();
+        });
       } else {
         modalTranslateY.value = withSpring(0, { damping: 20 });
       }
@@ -182,125 +89,150 @@ export default function Home() {
     transform: [{ translateY: modalTranslateY.value }],
   }));
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }, { translateX: translateX.value }],
-    opacity: opacity.value,
-  }));
+  if (loading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#007bff" />
+      </View>
+    );
+  }
 
-  const handleImagePress = (url: string) => {
-    setCurrentUrl(url);
-    setShowWebView(true);
+  const renderItem = ({ item, index }) => {
+    const inputRange = [
+      (index - 1) * height,
+      index * height,
+      (index + 1) * height,
+    ];
+
+    const scale = scrollY.interpolate({
+      inputRange,
+      outputRange: [0.8, 1, 0.8],
+      extrapolate: 'clamp',
+    });
+
+    const opacity = scrollY.interpolate({
+      inputRange,
+      outputRange: [0.5, 1, 0.5],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <Animated.View style={{ transform: [{ scale }], opacity }}>
+        <NewsCard item={item} onPress={handleOpenWebView} />
+      </Animated.View>
+    );
   };
 
-  const shareNews = async (newsItem: NewsItem) => {
-    try {
-      await Share.share({
-        message: `${newsItem.title}\n${newsItem.content}\nRead more at: ${newsItem.url}`,
-      });
-    } catch (error) {
-      console.error('Error sharing news:', error);
-    }
-  };
+  const getItemLayout = (data, index) => ({
+    length: height,
+    offset: height * index,
+    index,
+  });
 
-  if (loading) return <LoadingScreen />;
-
-  if (error) return <ErrorScreen errorMessage={error} />;
-
-  if (allNews.length === 0) return <Text>No news available</Text>;
-
-  const startIndex = Math.max(0, currentIndex - PRELOAD_COUNT);
-  const endIndex = Math.min(allNews.length - 1, currentIndex + PRELOAD_COUNT);
-  const visibleNews = allNews.slice(startIndex, endIndex + 1);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
-      <StatusBar barStyle="light-content" backgroundColor="#252525" />
-      <PanGestureHandler onGestureEvent={handleSwipe}>
-        <Animated.View style={{ flex: 1 }}>
-          {visibleNews.map((newsItem, index) => (
-            <Animated.View
-              key={newsItem.id}
-              style={[
-                {
-                  position: 'absolute',
-                  top: (index - (currentIndex - startIndex)) * height,
-                  left: 0,
-                  right: 0,
-                  height,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                },
-                animatedIndex.value === currentIndex ? animatedStyle : { opacity: 0 },
-              ]}
-            >
-              <NewsCard
-                item={{
-                  ...newsItem,
-                  imageUrl: imageCache.current[newsItem.imageUrl] || newsItem.imageUrl,
-                }}
-                onShare={shareNews}
-                onImagePress={handleImagePress}
-                onSpeak={function (texts: string[]): void {
-                  throw new Error('Function not implemented.');
-                }} />
-            </Animated.View>
-          ))}
-        </Animated.View>
-      </PanGestureHandler>
+    <ProtectedRoute>
+      <View style={{ backgroundColor: 'black' }}>
+        <StatusBar barStyle="light-content" backgroundColor="#252525" />
+        <Animated.FlatList
+          data={newsData}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          pagingEnabled
+          showsVerticalScrollIndicator={false}
+          snapToInterval={height}
+          decelerationRate="fast"
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: true }
+          )}
+          getItemLayout={getItemLayout}
+        />
 
-      <Modal
-        visible={showWebView}
-        onRequestClose={() => setShowWebView(false)}
-        animationType="slide"
-        transparent={true}
-      >
-        <PanGestureHandler onGestureEvent={handleModalSwipe}>
-          <Animated.View style={[styles.modalContainer, animatedModalStyle]}>
-
-            <View style={styles.indicatorContainer}>
-              <View style={styles.indicator} />
-              <Text style={styles.indicatorText}>Swipe down to close</Text>
-            </View>
-
-            <PanGestureHandler onGestureEvent={handleModalSwipe}>
-              <Animated.View style={{ flex: 1 }}>
-                <WebViewScreen url={currentUrl} onClose={() => setShowWebView(false)} />
-              </Animated.View>
-            </PanGestureHandler>
-          </Animated.View>
-        </PanGestureHandler>
-      </Modal>
-
-    </SafeAreaView>
+        <Modal
+          animationType="none"
+          transparent={true}
+          visible={showWebView}
+          onRequestClose={() => setShowWebView(false)}
+        >
+          <PanGestureHandler onGestureEvent={handleModalSwipe}>
+            <Animateds.View style={[styles.modalContainer, animatedModalStyle]}>
+              <TouchableOpacity style={styles.closeButton} onPress={handleCloseWebView}>
+                <View style={styles.closeLine}></View>
+                <Text className='text-sm text-gray-400 pt-2'>Swipe down to close</Text>
+              </TouchableOpacity>
+              <View style={styles.webViewContainer}>
+                {webViewLoading && (
+                  <View style={styles.webViewLoader}>
+                    <ActivityIndicator size="large" color="#007bff" />
+                  </View>
+                )}
+                <TouchableOpacity style={styles.closeButtonContainer} onPress={() => setShowWebView(false)}>
+                  <Text style={styles.closeButtonText}>Close</Text>
+                </TouchableOpacity>
+                <WebView
+                  source={{ uri: currentUrl }}
+                  onLoadEnd={() => setWebViewLoading(false)}
+                  style={{ opacity: webViewLoading ? 0 : 1 }}
+                />
+              </View>
+            </Animateds.View>
+          </PanGestureHandler>
+        </Modal>
+      </View>
+    </ProtectedRoute>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  modalContainer: {
-    height: height * 0.8,
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: 'hidden',
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-  },
-  indicatorContainer: {
-    width: '100%',
-    height: 60,
+  loaderContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#E0E0E0',
   },
-  indicator: {
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#858585',
+    borderTopEndRadius: 30,
+    borderTopStartRadius: 30,
+    marginTop: 100, // to show a small part of the screen when modal is swiped down
+  },
+  closeButton: {
+    width: '100%',
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeLine: {
     width: 40,
     height: 5,
+    backgroundColor: '#aaa',
     borderRadius: 2.5,
-    backgroundColor: '#B0B0B0',
   },
-  indicatorText: {
-    color: '#B0B0B0',
-    paddingTop: 10,
+  webViewContainer: {
+    flex: 1,
+  },
+  webViewLoader: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  closeButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    backgroundColor: 'rgba(255,0,0,0.8)',
+    padding: 16,
+    zIndex: 1,
+    width: '100%'
+  },
+  closeButtonText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '600'
   },
 });
+
+export default News;
+

@@ -1,24 +1,38 @@
-import React from 'react';
-import { StyleSheet, Image, Platform, Button, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, View, Text, Button, Alert, Platform, SafeAreaView, StatusBar, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-
-import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
+import ProtectedRoute from '../components/ProtectedRoute';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { ExternalLink } from '@/components/ExternalLink';
 
-export default function TabTwoScreen() {
+export default function Profile() {
   const navigation = useNavigation();
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch email from AsyncStorage
+    const fetchEmail = async () => {
+      try {
+        const storedEmail = await AsyncStorage.getItem('userEmail');
+        setEmail(storedEmail);
+      } catch (error) {
+        console.error('Error fetching email:', error);
+      }
+    };
+
+    fetchEmail();
+  }, []);
 
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('supabaseToken');
-      // Optionally navigate to login screen
-      navigation.navigate('signup');
+      await AsyncStorage.removeItem('userEmail');
+      navigation.navigate('login');
     } catch (error) {
       console.error('Error logging out:', error);
       Alert.alert('Error', 'Failed to log out. Please try again.');
@@ -26,98 +40,99 @@ export default function TabTwoScreen() {
   };
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={<Ionicons size={310} name="code-slash" style={styles.headerImage} />}
-    >
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      
-      <Button title="Logout" onPress={handleLogout} color="#FF3B30" />
+    <ProtectedRoute>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <ThemedView style={styles.container}>
+          <View style={styles.profileContainer}>
+            <Ionicons name="person-circle-outline" size={100} color="#ffffff" style={styles.icon} />
+            <ThemedText type="title" style={styles.title}>Profile</ThemedText>
+            {email ? (
+              <ThemedText style={styles.email}>Email: {email}</ThemedText>
+            ) : (
+              <ThemedText>Loading...</ThemedText>
+            )}
+          </View>
 
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user's current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText> library
-          to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity className='w-full py-3 bg-red-600 rounded-2xl' onPress={handleLogout}>
+              <Text className='text-lg text-white font-semibold text-center'>Logout</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <ThemedText type="title" style={styles.sectionTitle}>Settings</ThemedText>
+            <ExternalLink href="https://example.com/settings">
+              <ThemedText type="link"><MaterialIcons name="settings" size={18} color="#007BFF" /> Manage your settings</ThemedText>
+            </ExternalLink>
+          </View>
+
+          <View style={styles.section}>
+            <ThemedText type="title" style={styles.sectionTitle}>Help</ThemedText>
+            <ExternalLink href="https://example.com/help">
+              <ThemedText type="link"><MaterialIcons name="help-outline" size={18} color="#007BFF" /> Get Help</ThemedText>
+            </ExternalLink>
+          </View>
+        </ThemedView>
+      </SafeAreaView>
+    </ProtectedRoute>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  safeArea: {
+    flex: 1,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: 'black',
+  },
+  profileContainer: {
+    marginBottom: 24,
+    marginTop: 24,
+    backgroundColor: '#111',
+    borderRadius: 10,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  icon: {
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 8,
+  },
+  email: {
+    fontSize: 16,
+    color: '#ffffff',
+    marginBottom: 16,
+  },
+  buttonContainer: {
+    marginVertical: 16,
+  },
+  section: {
+    marginVertical: 16,
+    padding: 16,
+    backgroundColor: '#222',
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 8,
   },
 });

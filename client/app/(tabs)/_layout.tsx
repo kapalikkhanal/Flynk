@@ -36,7 +36,7 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="saved"
         options={{
           title: 'Saved',
@@ -46,7 +46,7 @@ export default function TabLayout() {
             <MaterialCommunityIcons name={focused ? 'bookmark-box-multiple' : 'bookmark-box-multiple-outline'} size={25} style={[{ marginBottom: -3 }]} color={color} />
           ),
         }}
-      />
+      /> */}
       <Tabs.Screen
         name="settings"
         options={{

@@ -57,13 +57,20 @@ const Login = () => {
         password,
       });
       if (!session) { Alert.alert('Login Error', error.message); }
-      console.log("Token", session.access_token)
-      if (error) throw error;
-      await AsyncStorage.setItem('supabaseToken', session.access_token);
+
+      if (error) {
+        Alert.alert('Login Error', error.message);
+        throw error;
+      }
+      const { user, access_token } = session;
+      const userEmail = user.email;
+      console.log("Token", userEmail, access_token)
+      await AsyncStorage.setItem('supabaseToken', access_token);
+      await AsyncStorage.setItem('userEmail', userEmail);
       setLoading(false);
       navigation.navigate('(tabs)');
     } catch (error) {
-      // Alert.alert('Login Error', error.message);
+      Alert.alert('Login Failed', error.message);
       setLoading(false);
     }
   };
@@ -127,12 +134,12 @@ const Login = () => {
               <Text className='text-white/80 text-center text-base'>Don&apos;t have an account? <Text className='font-bold text-base text-yellow-600'>Sign Up</Text></Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               className='mt-4'
               onPress={() => navigation.navigate('(tabs)')}
             >
               <Text className='text-white/80 text-center text-base'><Text className='font-bold text-base text-yellow-600'>Sign In as Guest</Text></Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import WebView from 'react-native-webview';
+import ProtectedRoute from '../components/ProtectedRoute';
 
 const { width } = Dimensions.get('window');
 
@@ -73,6 +74,7 @@ const Dashboard: React.FC = () => {
   const [rashifal, setRashifal] = useState<RashifalItem[]>([]);
   const [showWebView, setShowWebView] = useState(false);
   const [currentUrl, setCurrentUrl] = useState('');
+  const [webViewLoading, setWebViewLoading] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -173,93 +175,97 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
-      <StatusBar barStyle="light-content" backgroundColor="#252525" />
-      {showWebView ? (
-        <View style={{ flex: 1 }}>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => setShowWebView(false)}
-          >
-            <Text style={styles.closeButtonText}>Close</Text>
-          </TouchableOpacity>
-          <WebView
-            source={{ uri: currentUrl }}
-            style={{ flex: 1 }}
-          />
-        </View>
-      ) : (
-        <FlatList
-          data={[]}
-          renderItem={null}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <View style={styles.container}>
-              {/* Search Bar */}
-              <TextInput
-                style={styles.searchBar}
-                placeholder="Search news..."
-                value={searchText}
-                onChangeText={(text) => setSearchText(text)}
-                placeholderTextColor="white"
-              />
-
-              {/* Display today's date */}
-              <View style={styles.dateContainer}>
-                <Text style={styles.dateHeading}>{news[0].nepaliDate}</Text>
-                <View style={styles.tithiContainer}>
-                  <Text style={styles.dateText}>{news[0].tithi}, </Text>
-                  <Text style={styles.dateText}>{news[0].panchanga}</Text>
-                </View>
+    <ProtectedRoute>
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
+        <StatusBar barStyle="light-content" backgroundColor="#252525" />
+        {showWebView ? (
+          <View style={styles.webViewContainer}>
+            {webViewLoading && (
+              <View style={styles.webViewLoader}>
+                <ActivityIndicator size="large" color="#0000ff" />
               </View>
+            )}
+            <TouchableOpacity style={styles.closeButton} onPress={() => setShowWebView(false)}>
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+            <WebView
+              source={{ uri: currentUrl }}
+              onLoadEnd={() => setWebViewLoading(false)}
+              style={{ opacity: webViewLoading ? 0 : 1 }}
+            />
+          </View>
+        ) : (
+          <FlatList
+            data={[]}
+            renderItem={null}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              <View style={styles.container}>
+                {/* Search Bar */}
+                <TextInput
+                  style={styles.searchBar}
+                  placeholder="Search news..."
+                  value={searchText}
+                  onChangeText={(text) => setSearchText(text)}
+                  placeholderTextColor="white"
+                />
 
-              {/* Top News Section */}
-              <View style={styles.trendingSection}>
-                <Text style={styles.sectionTitle}>Latest News</Text>
+                {/* Display today's date */}
+                <View style={styles.dateContainer}>
+                  <Text style={styles.dateHeading}>{news[0].nepaliDate}</Text>
+                  <View style={styles.tithiContainer}>
+                    <Text style={styles.dateText}>{news[0].tithi}, </Text>
+                    <Text style={styles.dateText}>{news[0].panchanga}</Text>
+                  </View>
+                </View>
+
+                {/* Top News Section */}
+                <View style={styles.trendingSection}>
+                  <Text style={styles.sectionTitle}>Latest News</Text>
+                  <FlatList
+                    data={news}
+                    renderItem={renderNewsItem}
+                    keyExtractor={(item) => item.id}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.trendingNewsList}
+                  />
+                </View>
+
+                {/* Horizontal Scroll Bar with Bubbles */}
                 <FlatList
-                  data={news}
-                  renderItem={renderNewsItem}
-                  keyExtractor={(item) => item.id}
+                  data={logos}
+                  renderItem={({ item: logo }) => (
+                    <TouchableOpacity
+                      key={logo.id}
+                      onPress={() => handleLogoClick(logo.link)}
+                      style={styles.logoBubble}
+                    >
+                      <Image source={logo.imageUrl} style={styles.logoImage} />
+                    </TouchableOpacity>
+                  )}
+                  keyExtractor={(item) => item.id.toString()}
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.trendingNewsList}
+                  contentContainerStyle={styles.logoScrollView}
                 />
+
+                {/* Rashifal Section */}
+                <View style={styles.rashifalSection}>
+                  <Text style={styles.sectionTitle}>Today's Rashifal</Text>
+                  <FlatList
+                    data={rashifal}
+                    renderItem={renderRashifalItem}
+                    keyExtractor={(item) => item.sign}
+                    showsVerticalScrollIndicator={false}
+                  />
+                </View>
               </View>
-
-              {/* Horizontal Scroll Bar with Bubbles */}
-              <FlatList
-                data={logos}
-                renderItem={({ item: logo }) => (
-                  <TouchableOpacity
-                    key={logo.id}
-                    onPress={() => handleLogoClick(logo.link)}
-                    style={styles.logoBubble}
-                  >
-                    <Image source={logo.imageUrl} style={styles.logoImage} />
-                  </TouchableOpacity>
-                )}
-                keyExtractor={(item) => item.id.toString()}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.logoScrollView}
-              />
-
-              {/* Rashifal Section */}
-              <View style={styles.rashifalSection}>
-                <Text style={styles.sectionTitle}>Today's Rashifal</Text>
-                <FlatList
-                  data={rashifal}
-                  renderItem={renderRashifalItem}
-                  keyExtractor={(item) => item.sign}
-                  showsVerticalScrollIndicator={false}
-                />
-              </View>
-            </View>
-          }
-        />
-      )}
-    </SafeAreaView>
-
+            }
+          />
+        )}
+      </SafeAreaView>
+    </ProtectedRoute>
   );
 };
 
@@ -292,8 +298,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   logoBubble: {
-    width: 70,
-    height: 70,
+    width: 60,
+    height: 60,
     borderRadius: 50,
     backgroundColor: '#252525',
     justifyContent: 'center',
@@ -306,8 +312,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   logoImage: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     borderRadius: 40,
   },
   trendingSection: {
@@ -413,16 +419,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FAF9F6',
   },
+  webViewContainer: {
+    flex: 1,
+  },
+  webViewLoader: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
   closeButton: {
     position: 'absolute',
-    top: 36,
-    right: 10,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 10,
+    bottom: 0,
+    backgroundColor: 'rgba(255,0,0,0.8)',
+    padding: 16,
     zIndex: 1,
+    width: '100%'
   },
   closeButtonText: {
     color: '#fff',
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '600'
   },
 });
