@@ -121,7 +121,7 @@ scrapeNews();
 scrapeRashifal()
 
 // Schedule a cron job to fetch news every 5 minutes
-cron.schedule('*/15 * * * *', async () => {
+cron.schedule('*/3 * * * *', async () => {
     try {
         await scrapeNews();
         console.log('News fetched and updated.');
