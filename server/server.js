@@ -15,6 +15,7 @@ const API_URL = "https://app.micmonster.com/restapi/create";
 
 app.use(compression());
 app.use(bodyParser.json());
+app.use(cors())
 
 let newsData = [];
 let rashifal = [];
@@ -172,17 +173,18 @@ async function scrapeRashifal() {
     }
 };
 
-scrapeNews();
+// scrapeNews();
 scrapeRashifal()
 
 // Schedule a cron job to fetch news every 5 minutes
-cron.schedule('*/3 * * * *', async () => {
-    try {
-        await scrapeNews();
-        console.log('News fetched and updated.');
-    } catch (error) {
-        console.error('Error in cron job:', error);
-    }
+cron.schedule('*/1 * * * *', async () => {
+    // try {
+    //     await scrapeNews();
+    //     console.log('News fetched and updated.');
+    // } catch (error) {
+    //     console.error('Error in cron job:', error);
+    // }
+    console.log(newsData)
 });
 
 // Add pagination to the /api/news endpoint
@@ -280,6 +282,40 @@ app.post("/api/convert-tts", async (req, res) => {
     } catch (error) {
         console.error("Error converting text to speech:", error.message);
         res.status(500).json({ error: "Failed to convert text to speech." });
+    }
+});
+
+app.post('/api/post', async (req, res) => {
+    try {
+        const { title, content, imageUrl, urls, id, date } = req.body;
+        const titleAudio = await convertToSpeech(title);
+        const contentAudio = await convertToSpeech(content);
+
+        const newNewsItem = {
+            title,
+            titleAudio,
+            sourceImageUrl: '',
+            imageUrl,
+            id,
+            urls,
+            date: date,
+            content,
+            contentAudio,
+            nepaliDate: '',
+            tithi: '',
+            panchanga: '',
+        };
+
+        if (newsData.length >= 3) {
+            newsData.splice(2, 0, newNewsItem);
+        } else {
+            newsData.push(newNewsItem); 
+        }
+
+        res.status(200).json({ message: 'Added successfully' });
+    } catch (error) {
+        console.error('Error handling the request:', error);
+        res.status(500).json({ message: 'Internal Server Error' })
     }
 });
 
