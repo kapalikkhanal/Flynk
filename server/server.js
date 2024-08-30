@@ -212,6 +212,7 @@ app.get('/api/top5', (req, res) => {
             title: news.title,
             sourceImageUrl: news.sourceImageUrl,
             id: news.id,
+            imageUrl: news.imageUrl,
             urls: news.urls,
             date: news.date,
             nepaliDate: news.nepaliDate,
