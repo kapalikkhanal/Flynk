@@ -15,31 +15,48 @@ import ProtectedRoute from '../components/ProtectedRoute';
 
 const { height, width } = Dimensions.get('window');
 
+const PAGE_SIZE = 10;
+
 const News: React.FC = () => {
   const [newsData, setNewsData] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [showWebView, setShowWebView] = useState(false);
   const [currentUrl, setCurrentUrl] = useState('');
   const [webViewLoading, setWebViewLoading] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const modalTranslateY = useSharedValue(0);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  const fetchData = useCallback(async (page: any) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`https://flynk.onrender.com/api/news?page=${page}&limit=${PAGE_SIZE}`);
+      const data = await response.json();
+      if (data.length < PAGE_SIZE) {
+        setHasMore(false); // No more data if less than PAGE_SIZE is returned
+      }
+      setNewsData((prevData) => [...prevData, ...data]); // Append new data to existing data
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('https://flynk.onrender.com/api/news');
-        const data = await response.json();
-        setNewsData(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+    fetchData(page);
+  }, [page, fetchData]);
+
+  const handleLoadMore = () => {
+    if (hasMore && !loading) {
+      setPage((prevPage) => prevPage + 1);
+    }
+  };
 
   const handleOpenWebView = useCallback((url) => {
     setCurrentUrl(url);
@@ -52,13 +69,6 @@ const News: React.FC = () => {
     setCurrentUrl('');
   };
 
-  const openFirstSourceUrl = useCallback(() => {
-    if (newsData.length > 0) {
-      const firstUrl = newsData[0].source;
-      handleOpenWebView(firstUrl);
-    }
-  }, [newsData, handleOpenWebView]);
-
   const closeModal = useCallback(() => {
     setShowWebView(false);
   }, []);
@@ -68,7 +78,6 @@ const News: React.FC = () => {
       modalTranslateY.value = withTiming(0, { duration: 300 });
     }
   }, [showWebView, modalTranslateY]);
-
 
   const handleModalSwipe = useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
     onActive: (event) => {
@@ -89,13 +98,18 @@ const News: React.FC = () => {
     transform: [{ translateY: modalTranslateY.value }],
   }));
 
-  if (loading) {
-    return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#007bff" />
-      </View>
-    );
-  }
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    {
+      useNativeDriver: true,
+      listener: (event) => {
+        const newIndex = Math.round(event.nativeEvent.contentOffset.y / height);
+        if (newIndex !== currentIndex) {
+          setCurrentIndex(newIndex);
+        }
+      }
+    }
+  );
 
   const renderItem = ({ item, index }) => {
     const inputRange = [
@@ -118,7 +132,12 @@ const News: React.FC = () => {
 
     return (
       <Animated.View style={{ transform: [{ scale }], opacity }}>
-        <NewsCard item={item} onPress={handleOpenWebView} />
+        <NewsCard
+          item={item}
+          onPress={handleOpenWebView}
+          isVisible={index === currentIndex}
+          stopAudio={index !== currentIndex}
+        />
       </Animated.View>
     );
   };
@@ -129,10 +148,99 @@ const News: React.FC = () => {
     index,
   });
 
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.5,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [pulseAnim]);
+
+  if (loading) {
+    return (
+      // <View style={styles.loaderContainer}>
+      //   <ActivityIndicator size="large" color="#007bff" />
+      // </View>
+      <View style={styles.cardContainer}>
+        <View style={styles.imageContainer}>
+          <Animated.View style={[styles.skeletonContainer, { opacity: pulseAnim }]}>
+            <View style={styles.skeletonInner} />
+          </Animated.View>
+        </View>
+        <View className='h-1 bg-white w-full' />
+        <View style={styles.contentContainer}>
+          {/* TIme  */}
+          <Animated.View className="h-4 mt-3 w-36 bg-gray-200 rounded-full dark:bg-gray-400 mb-6">
+
+          </Animated.View>
+
+          {/* Heading */}
+          <Animated.View className="h-8 w-full bg-gray-200 rounded-full dark:bg-gray-400 mb-3">
+
+          </Animated.View>
+          <Animated.View className="h-8 w-48 bg-gray-200 rounded-full dark:bg-gray-400 mb-6">
+
+          </Animated.View>
+
+          {/* Content  */}
+          <Animated.View className="h-4 w-full bg-gray-200 rounded-full dark:bg-gray-400 mb-3">
+
+          </Animated.View>
+          <Animated.View className="h-4 w-full bg-gray-200 rounded-full dark:bg-gray-400 mb-3">
+
+          </Animated.View>
+          <Animated.View className="h-4 w-full bg-gray-200 rounded-full dark:bg-gray-400 mb-3">
+
+          </Animated.View>
+          <Animated.View className="h-4 w-full bg-gray-200 rounded-full dark:bg-gray-400 mb-3">
+
+          </Animated.View>
+          <Animated.View className="h-4 w-full bg-gray-200 rounded-full dark:bg-gray-400 mb-3">
+
+          </Animated.View>
+
+          {/* Sources Text */}
+          <Animated.View className="h-4 w-36 bg-gray-200 rounded-full dark:bg-gray-400 mb-6">
+
+          </Animated.View>
+
+          <View className='flex flex-row space-x-4'>
+            {/* Sources Text */}
+            <Animated.View className="h-16 w-16 bg-gray-200 rounded-full dark:bg-gray-400">
+
+            </Animated.View>
+            <Animated.View className="h-16 w-16 bg-gray-200 rounded-full dark:bg-gray-400">
+
+            </Animated.View>
+
+            <Animated.View className="h-16 w-16 bg-gray-200 rounded-full dark:bg-gray-400">
+
+            </Animated.View>
+            <Animated.View className="h-16 w-16 bg-gray-200 rounded-full dark:bg-gray-400">
+
+            </Animated.View>
+            <Animated.View className="h-16 w-16 bg-gray-200 rounded-full dark:bg-gray-400">
+
+            </Animated.View>
+
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <ProtectedRoute>
-      <View style={{ backgroundColor: 'black' }}>
+      <View style={{ backgroundColor: '#031e1f' }}>
         <StatusBar barStyle="light-content" backgroundColor="#252525" />
         <Animated.FlatList
           data={newsData}
@@ -142,11 +250,10 @@ const News: React.FC = () => {
           showsVerticalScrollIndicator={false}
           snapToInterval={height}
           decelerationRate="fast"
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: true }
-          )}
+          onScroll={handleScroll}
           getItemLayout={getItemLayout}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
         />
 
         <Modal
@@ -231,6 +338,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 18,
     fontWeight: '600'
+  },
+  cardContainer: {
+    position: 'relative',
+    flex: 1,
+    width: width,
+    height: height,
+    backgroundColor: '#031e1f',
+    paddingBottom: 50,
+  },
+  imageContainer: {
+    overflow: 'hidden',
+    height: '45%',
+  },
+  contentContainer: {
+    flex: 1,
+    paddingTop: 10,
+    paddingLeft: 15,
+    paddingRight: 15,
+  },
+  skeletonContainer: {
+    width: '100%',
+    height: '100%', // Adjust height based on your needs
+    borderRadius: 8,
+    backgroundColor: '#e0e0e0', // Light gray for skeleton
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  skeletonInner: {
+    flex: 1,
+    backgroundColor: '#d1d1d1', // Slightly darker gray for the inner part
+    borderRadius: 8,
   },
 });
 

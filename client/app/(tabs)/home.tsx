@@ -176,7 +176,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <ProtectedRoute>
-      <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#031e1f' }}>
         <StatusBar barStyle="light-content" backgroundColor="#252525" />
         {showWebView ? (
           <View style={styles.webViewContainer}>
@@ -274,13 +274,13 @@ export default Dashboard;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#031e1f',
     paddingHorizontal: 16,
     paddingTop: 32,
   },
   searchBar: {
     height: 50,
-    backgroundColor: 'gray',
+    backgroundColor: '#223E3F',
     borderRadius: 10,
     paddingHorizontal: 16,
     fontSize: 16,
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   logoScrollView: {
     flexDirection: 'row',
     marginBottom: 16,
-    marginTop: 10,
+    marginTop: 20,
   },
   logoBubble: {
     width: 60,
@@ -331,7 +331,9 @@ const styles = StyleSheet.create({
   newsCard: {
     width: width * 0.8,
     marginRight: 16,
-    backgroundColor: '#1c1c1c',
+    // backgroundColor: '#2C3E45', 304854, 223E3F, 2B4F60
+    // 3A4D48
+    backgroundColor: '#223E3F',
     borderRadius: 12,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -343,7 +345,7 @@ const styles = StyleSheet.create({
   },
   publishedDate: {
     position: 'absolute',
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: 'light',
     color: '#FAF9F6',
     bottom: 4,
@@ -392,7 +394,7 @@ const styles = StyleSheet.create({
   rashifalCard: {
     flexDirection: 'row',
     marginBottom: 12,
-    backgroundColor: '#1c1c1c',
+    backgroundColor: '#223E3F',
     padding: 12,
     borderRadius: 12,
     shadowColor: '#000',

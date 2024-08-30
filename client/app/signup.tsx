@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, SafeAreaView, StatusBar, KeyboardAvoidingView, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, SafeAreaView, StyleSheet, StatusBar, Image, KeyboardAvoidingView, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 import { supabase } from './components/supabase'
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 const Signup = () => {
   const [email, setEmail] = useState('');
@@ -49,7 +50,7 @@ const Signup = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#031e1f' }}>
       <StatusBar barStyle="light-content" backgroundColor="#252525" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -60,14 +61,17 @@ const Signup = () => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={{ padding: 16 }}>
-            <Text className='text-3xl font-bold text-center mb-6 text-white'>Sign Up</Text>
+            <View style={styles.container}>
+              <Image source={require('../assets/images/logo.png')} style={styles.logo} />
+              <Text className='text-xl font-bold text-center text-white'>THE HEADLINES</Text>
+            </View>
             <TextInput
               className='border border-gray-300 rounded-lg p-3 mb-4 h-16 text-white placeholder:text-white'
               placeholder="Name"
               keyboardType="default"
               value={name}
               onChangeText={setName}
-              placeholderTextColor="gray" 
+              placeholderTextColor="gray"
             />
 
             <TextInput
@@ -98,16 +102,22 @@ const Signup = () => {
                 placeholderTextColor="gray"
               />
               <TouchableOpacity
-                className='absolute right-3 mt-3 p-3'
+                className='absolute right-0.5 mt-0.5 p-5'
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Text className='text-white'>{showPassword ? 'Hide' : 'Show'}</Text>
+                <Text className='text-white'>
+                  {showPassword ?
+                    <Ionicons name="eye-sharp" size={24} color="white" />
+                    :
+                    <Ionicons name="eye-off-sharp" size={24} color="white" />
+                  }
+                </Text>
               </TouchableOpacity>
             </View>
 
             <View className='flex justify-center items-center w-full'>
               <TouchableOpacity
-                className='border-gray-600 w-full mt-10 rounded-xl bg-white'
+                className='border-gray-600 w-full mt-3 rounded-xl bg-white'
                 onPress={handleSignup}
               >
                 {loading ? (
@@ -120,11 +130,11 @@ const Signup = () => {
               </TouchableOpacity>
             </View>
             <TouchableOpacity
-              className='mt-4'
+              className='mt-8'
               onPress={() => navigation.navigate('login')}
             >
-              <Text className='text-white/80 text-center text-base'>
-                Already have an account? <Text className='font-bold text-base text-yellow-600'>Sign In</Text>
+              <Text className='text-white/80 text-center text-lg'>
+                Already have an account? <Text className='font-bold text-lg text-yellow-600'>Sign In</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -135,3 +145,20 @@ const Signup = () => {
 };
 
 export default Signup;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#031e1f',
+    marginBottom: 30
+  },
+  logo: {
+    width: 150,
+    height: 150,
+    resizeMode: 'contain',
+    marginBottom: 10,
+  }
+})

@@ -13,11 +13,14 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        // tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
+        tabBarStyle: {
+          backgroundColor: '#223E3F', // Dark background color for the tab bar
+          height: 80,
+        },
       }}
     >
-
       <Tabs.Screen
         name="home"
         options={{
@@ -36,23 +39,12 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* <Tabs.Screen
-        name="saved"
-        options={{
-          title: 'Saved',
-          tabBarIcon: ({ color, focused }) => (
-            // <TabBarIcon name={focused ? 'settings' : 'settings-outline'} color={color} />
-            // <FontAwesome5 name={focused ? 'user-alt' : 'user'} size={20} style={[{ marginBottom: -3 }]} color={color} />
-            <MaterialCommunityIcons name={focused ? 'bookmark-box-multiple' : 'bookmark-box-multiple-outline'} size={25} style={[{ marginBottom: -3 }]} color={color} />
-          ),
-        }}
-      /> */}
+
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
-            // <TabBarIcon name={focused ? 'settings' : 'settings-outline'} color={color} />
             <FontAwesome5 name={focused ? 'user-alt' : 'user'} size={20} style={[{ marginBottom: -3 }]} color={color} />
           ),
         }}

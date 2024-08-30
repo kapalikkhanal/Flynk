@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, KeyboardAvoidingView, ScrollView, Platform, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, TextInput, Image, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, KeyboardAvoidingView, ScrollView, Platform, SafeAreaView, StatusBar } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './components/supabase'
 import { Redirect, useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -76,7 +77,7 @@ const Login = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#031e1f' }}>
       <StatusBar barStyle="light-content" backgroundColor="#252525" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -86,8 +87,11 @@ const Login = () => {
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
           keyboardShouldPersistTaps="handled"
         >
-          <View className='flex-1 justify-center p-6 bg-black'>
-            <Text className='text-3xl font-bold text-center mb-6  text-white'>Sign In</Text>
+          <View style={{ padding: 16 }}>
+            <View style={styles.container}>
+              <Image source={require('../assets/images/logo.png')} style={styles.logo} />
+              <Text className='text-xl font-bold text-center text-white'>THE HEADLINES</Text>
+            </View>
             <TextInput
               className='border border-gray-300 rounded-lg p-3 mb-4 h-16 text-white'
               placeholder="Email"
@@ -106,10 +110,16 @@ const Login = () => {
                 placeholderTextColor="gray"
               />
               <TouchableOpacity
-                className='absolute right-3 top-6'
+                className='absolute right-0.5 mt-0.5 p-5'
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Text className='text-white'>{showPassword ? 'Hide' : 'Show'}</Text>
+                <Text className='text-white'>
+                  {showPassword ?
+                    <Ionicons name="eye-sharp" size={24} color="white" />
+                    :
+                    <Ionicons name="eye-off-sharp" size={24} color="white" />
+                  }
+                </Text>
               </TouchableOpacity>
             </View>
             <View className='flex justify-center items-center w-full '>
@@ -128,18 +138,11 @@ const Login = () => {
               </View>
             </View>
             <TouchableOpacity
-              className='mt-4'
+              className='mt-8'
               onPress={() => navigation.navigate('signup')}
             >
-              <Text className='text-white/80 text-center text-base'>Don&apos;t have an account? <Text className='font-bold text-base text-yellow-600'>Sign Up</Text></Text>
+              <Text className='text-white/80 text-center text-lg'>Don&apos;t have an account? <Text className='font-bold text-lg text-yellow-600'>Sign Up</Text></Text>
             </TouchableOpacity>
-
-            {/* <TouchableOpacity
-              className='mt-4'
-              onPress={() => navigation.navigate('(tabs)')}
-            >
-              <Text className='text-white/80 text-center text-base'><Text className='font-bold text-base text-yellow-600'>Sign In as Guest</Text></Text>
-            </TouchableOpacity> */}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -148,7 +151,20 @@ const Login = () => {
 };
 
 const styles = StyleSheet.create({
-  // You can add any additional styles here if needed
+  container: {
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#031e1f',
+    marginBottom: 30
+  },
+  logo: {
+    width: 150,
+    height: 150,
+    resizeMode: 'contain',
+    marginBottom: 10,
+  }
 });
 
 export default Login;
