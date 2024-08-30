@@ -16,6 +16,49 @@ app.use(bodyParser.json());
 
 let newsData = [];
 let rashifal = [];
+let audioCache = new Map();
+
+async function convertToSpeech(text, locale = "ne-NP") {
+
+    if (audioCache.has(text)) {
+        return audioCache.get(text);
+    }
+    console.log("Title:", text)
+    const formData = new URLSearchParams({
+        locale,
+        content: `<voice name="ne-NP-SagarNeural">${text}</voice>`,
+        ip: "127.0.0.1",
+    });
+
+    try {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error: ${response.status} ${response.statusText}`);
+        }
+
+        const responseText = await response.text();
+
+        const audioData = responseText.match(/([A-Za-z0-9+/=]+)/);
+        if (!audioData) {
+            throw new Error("No valid base64 audio data found in the response.");
+        }
+
+        // Store the audio data in the cache
+        audioCache.set(text, audioData[1]);
+
+        return audioData[1];
+    } catch (error) {
+        console.error("Error converting text to speech:", error.message);
+        return null;
+    }
+}
 
 async function scrapeNews() {
     try {
@@ -75,14 +118,19 @@ async function scrapeNews() {
                     }
                 });
 
+                const titleAudio = await convertToSpeech(title);
+                const contentAudio = await convertToSpeech(articleText);
+
                 news.push({
                     title,
+                    titleAudio,
                     sourceImageUrl,
                     imageUrl,
                     id,
                     urls: sourceUrls,
                     date: publishedDate,
                     content: articleText,
+                    contentAudio,
                     nepaliDate,
                     tithi,
                     panchanga,
@@ -162,7 +210,7 @@ app.get('/api/rashifal', (req, res) => {
 });
 
 app.post("/api/convert-tts", async (req, res) => {
-    const { text, locale = "ne-NP" } = req.body; // Get text and locale from the request body
+    const { text, locale = "ne-NP" } = req.body;
 
     if (!text) {
         return res.status(400).json({ error: "Text is required" });
