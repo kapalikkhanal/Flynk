@@ -206,6 +206,28 @@ app.get('/api/news', (req, res) => {
     }
 });
 
+app.get('/api/top5', (req, res) => {
+    try {
+        const top5News = newsData.slice(0, 5).map(news => ({
+            title: news.title,
+            sourceImageUrl: news.sourceImageUrl,
+            id: news.id,
+            urls: news.urls,
+            date: news.date,
+            nepaliDate: news.nepaliDate,
+            tithi: news.tithi,
+            panchanga: news.panchanga
+        }));
+
+        res.json({
+            top5News,
+        });
+    } catch (error) {
+        console.error('Error fetching top 5 news:', error);
+        res.status(500).json({ error: 'Failed to get top 5 news' });
+    }
+});
+
 app.get('/api/rashifal', (req, res) => {
     try {
         if (rashifal.length === 0) {
