@@ -173,18 +173,17 @@ async function scrapeRashifal() {
     }
 };
 
-// scrapeNews();
+scrapeNews();
 scrapeRashifal()
 
 // Schedule a cron job to fetch news every 5 minutes
-cron.schedule('*/1 * * * *', async () => {
-    // try {
-    //     await scrapeNews();
-    //     console.log('News fetched and updated.');
-    // } catch (error) {
-    //     console.error('Error in cron job:', error);
-    // }
-    console.log(newsData)
+cron.schedule('*/3 * * * *', async () => {
+    try {
+        await scrapeNews();
+        console.log('News fetched and updated.');
+    } catch (error) {
+        console.error('Error in cron job:', error);
+    }
 });
 
 // Add pagination to the /api/news endpoint
