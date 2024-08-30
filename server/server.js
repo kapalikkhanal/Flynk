@@ -3,11 +3,16 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const cors = require('cors');
 const cron = require('node-cron');
+const bodyParser = require("body-parser");
+const { URLSearchParams } = require("url");
 
 const app = express();
 const PORT = 3001;
 
 const url = 'https://www.hamropatro.com/';
+const API_URL = "https://app.micmonster.com/restapi/create";
+
+app.use(bodyParser.json());
 
 let newsData = [];
 let rashifal = [];
@@ -153,6 +158,47 @@ app.get('/api/rashifal', (req, res) => {
     } catch (error) {
         console.error('Error fetching the rashifal:', error);
         res.status(500).json({ error: 'Failed to get rashifal' });
+    }
+});
+
+app.post("/api/convert-tts", async (req, res) => {
+    const { text, locale = "ne-NP" } = req.body; // Get text and locale from the request body
+
+    if (!text) {
+        return res.status(400).json({ error: "Text is required" });
+    }
+
+    const formData = new URLSearchParams({
+        locale,
+        content: `<voice name="ne-NP-SagarNeural">${text}</voice>`,
+        ip: "127.0.0.1",
+    });
+
+    try {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
+
+        const responseText = await response.text();
+
+        const audioData = responseText.match(/([A-Za-z0-9+/=]+)/); // Adjust regex as needed
+        if (!audioData) {
+            throw new Error("No valid base64 audio data found in the response.");
+        }
+
+        res.json({ audio: audioData[1] });
+
+    } catch (error) {
+        console.error("Error converting text to speech:", error.message);
+        res.status(500).json({ error: "Failed to convert text to speech." });
     }
 });
 
