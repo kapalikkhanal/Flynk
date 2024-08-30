@@ -5,6 +5,7 @@ const cors = require('cors');
 const cron = require('node-cron');
 const bodyParser = require("body-parser");
 const { URLSearchParams } = require("url");
+const compression = require('compression');
 
 const app = express();
 const PORT = 3001;
@@ -12,6 +13,7 @@ const PORT = 3001;
 const url = 'https://www.hamropatro.com/';
 const API_URL = "https://app.micmonster.com/restapi/create";
 
+app.use(compression());
 app.use(bodyParser.json());
 
 let newsData = [];
@@ -183,13 +185,21 @@ cron.schedule('*/3 * * * *', async () => {
     }
 });
 
+// Add pagination to the /api/news endpoint
 app.get('/api/news', (req, res) => {
     try {
-        if (newsData.length === 0) {
-            res.status(404).json({ message: 'No news found' });
-        } else {
-            res.json(newsData);
-        }
+        const { page = 1, limit = 10 } = req.query; // Get page and limit from query params
+        const startIndex = (page - 1) * limit;     // Calculate starting index
+        const endIndex = page * limit;             // Calculate ending index
+
+        const paginatedNews = newsData.slice(startIndex, endIndex); // Slice the news data for pagination
+
+        res.json({
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(newsData.length / limit),
+            totalNews: newsData.length,
+            news: paginatedNews,
+        });
     } catch (error) {
         console.error('Error fetching the news:', error);
         res.status(500).json({ error: 'Failed to get news' });
