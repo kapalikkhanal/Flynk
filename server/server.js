@@ -145,7 +145,7 @@ async function scrapeNews() {
                 console.error(`Error fetching details for ${url}:`, error);
             }
         }
-        console.log(selfPushedNewsData)
+        // console.log(selfPushedNewsData)
         newsData = [...news];
         newsData.push(...selfPushedNewsData);
     } catch (error) {
@@ -217,11 +217,11 @@ function formatElapsedTime(dateString) {
     const diffInDays = Math.floor(diffInMinutes / (24 * 60));
 
     if (diffInMinutes < 60) {
-        return `${diffInMinutes} minute aagi`;
+        return `${diffInMinutes} मिनेट अघी`;
     } else if (diffInHours < 24) {
-        return `${diffInHours} ghanta aagi`;
+        return `${diffInHours} घण्टा अघी`;
     } else {
-        return `${diffInDays} din aagi`;
+        return `${diffInDays} दिन अघी`;
     }
 }
 
