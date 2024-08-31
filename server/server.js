@@ -338,7 +338,7 @@ app.post("/api/convert-tts", async (req, res) => {
 
 app.post('/api/post', async (req, res) => {
     try {
-        const { title, content, imageUrl, urls, id, date } = req.body;
+        const { title, content, sourceImageUrl, imageUrl, urls, id, date } = req.body;
 
         try {
             titleAudio = await convertToSpeech(title);
@@ -356,7 +356,7 @@ app.post('/api/post', async (req, res) => {
         const newNewsItem = {
             title,
             titleAudio: titleAudio || null,
-            sourceImageUrl: null,
+            sourceImageUrl: sourceImageUrl || null,
             imageUrl: imageUrl || null,
             id,
             urls: urls || null,
