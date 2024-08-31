@@ -127,14 +127,14 @@ async function scrapeNews() {
 
                 news.push({
                     title,
-                    titleAudio: '',
+                    titleAudio: titleAudio || null,
                     sourceImageUrl,
                     imageUrl,
                     id,
                     urls: sourceUrls,
                     date: publishedDate,
                     content: articleText,
-                    contentAudio: '',
+                    contentAudio: contentAudio || null,
                     nepaliDate,
                     tithi,
                     panchanga,
