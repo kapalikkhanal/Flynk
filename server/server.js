@@ -6,6 +6,7 @@ const cron = require('node-cron');
 const bodyParser = require("body-parser");
 const { URLSearchParams } = require("url");
 const compression = require('compression');
+const moment = require('moment');
 
 const app = express();
 const PORT = 3001;
@@ -176,6 +177,54 @@ async function scrapeRashifal() {
     }
 };
 
+
+function parseDuration(durationString) {
+    const durationParts = durationString.match(/(\d+)([h|m])/g);
+    let totalMinutes = 0;
+
+    if (durationParts) {
+        durationParts.forEach(part => {
+            const value = parseInt(part, 10);
+            if (part.includes('h')) {
+                totalMinutes += value * 60; // Convert hours to minutes
+            } else if (part.includes('m')) {
+                totalMinutes += value;
+            }
+        });
+    }
+
+    return moment().subtract(totalMinutes, 'minutes');
+}
+
+function formatElapsedTime(dateString) {
+    let date;
+    if (/^\d+h \d+m/.test(dateString)) {
+        // Parse duration format like '1h 20m'
+        date = parseDuration(dateString);
+    } else if (/^\d+m/.test(dateString)) {
+        // Parse duration format like '2m'
+        date = parseDuration(dateString);
+    } else {
+        // Parse ISO date string
+        date = moment(dateString);
+    }
+
+    const now = moment(); // Current time
+
+    // Calculate the difference in minutes
+    const diffInMinutes = now.diff(date, 'minutes');
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInMinutes / (24 * 60));
+
+    if (diffInMinutes < 60) {
+        return `${diffInMinutes} minute aagi`;
+    } else if (diffInHours < 24) {
+        return `${diffInHours} ghanta aagi`;
+    } else {
+        return `${diffInDays} din aagi`;
+    }
+}
+
 scrapeNews();
 scrapeRashifal()
 
@@ -189,7 +238,6 @@ cron.schedule('*/3 * * * *', async () => {
     }
 });
 
-// Add pagination to the /api/news endpoint
 app.get('/api/news', (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query; // Get page and limit from query params
@@ -303,6 +351,8 @@ app.post('/api/post', async (req, res) => {
             console.error('Error converting content to speech:', error);
         }
 
+        const convertedTime = formatElapsedTime(date);
+
         const newNewsItem = {
             title,
             titleAudio: titleAudio || null,
@@ -310,7 +360,7 @@ app.post('/api/post', async (req, res) => {
             imageUrl: imageUrl || null,
             id,
             urls: urls || null,
-            date: date,
+            date: convertedTime,
             content: content || null,
             contentAudio: contentAudio || null,
             nepaliDate: null,
