@@ -290,22 +290,31 @@ app.post("/api/convert-tts", async (req, res) => {
 app.post('/api/post', async (req, res) => {
     try {
         const { title, content, imageUrl, urls, id, date } = req.body;
-        const titleAudio = await convertToSpeech(title);
-        const contentAudio = await convertToSpeech(content);
+
+        try {
+            titleAudio = await convertToSpeech(title);
+        } catch (error) {
+            console.error('Error converting title to speech:', error);
+        }
+        try {
+            contentAudio = await convertToSpeech(content);
+        } catch (error) {
+            console.error('Error converting content to speech:', error);
+        }
 
         const newNewsItem = {
             title,
             titleAudio: titleAudio || null,
-            sourceImageUrl: sourceImageUrl || null,
+            sourceImageUrl: null,
             imageUrl: imageUrl || null,
             id,
             urls: urls || null,
             date: date,
             content: content || null,
             contentAudio: contentAudio || null,
-            nepaliDate: nepaliDate || null,
-            tithi: tithi || null,
-            panchanga: panchanga || null,
+            nepaliDate: null,
+            tithi: null,
+            panchanga: null,
         };
         console.log(newNewsItem)
         selfPushedNewsData.push(newNewsItem);
