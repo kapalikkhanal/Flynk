@@ -16,6 +16,7 @@ const API_URL = "https://app.micmonster.com/restapi/create";
 app.use(compression());
 app.use(bodyParser.json());
 app.use(cors())
+app.use(express.static('public'));
 
 let newsData = [];
 let selfPushedNewsData = [];
@@ -361,6 +362,26 @@ app.put('/api/post/:id', (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 });
+
+app.delete('/api/post/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const newsIndex = selfPushedNewsData.findIndex(newsItem => newsItem.id === id);
+
+        if (newsIndex === -1) {
+            return res.status(404).json({ message: 'News item not found' });
+        }
+
+        selfPushedNewsData.splice(newsIndex, 1);
+
+        res.status(200).json({ message: 'News item deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting news item:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
