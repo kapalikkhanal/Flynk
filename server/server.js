@@ -18,6 +18,7 @@ app.use(bodyParser.json());
 app.use(cors())
 
 let newsData = [];
+let selfPushedNewsData = [];
 let rashifal = [];
 let audioCache = new Map();
 
@@ -126,14 +127,14 @@ async function scrapeNews() {
 
                 news.push({
                     title,
-                    titleAudio,
+                    titleAudio: '',
                     sourceImageUrl,
                     imageUrl,
                     id,
                     urls: sourceUrls,
                     date: publishedDate,
                     content: articleText,
-                    contentAudio,
+                    contentAudio: '',
                     nepaliDate,
                     tithi,
                     panchanga,
@@ -142,11 +143,12 @@ async function scrapeNews() {
                 console.error(`Error fetching details for ${url}:`, error);
             }
         }
-
-        newsData = news;
+        console.log(selfPushedNewsData)
+        newsData = [...news];
+        newsData.push(...selfPushedNewsData);
     } catch (error) {
         console.error('Error fetching the website:', error);
-        throw error; // Re-throw the error to be caught in the route handler
+        throw error;
     }
 }
 
@@ -231,6 +233,7 @@ app.get('/api/top5', (req, res) => {
 });
 
 app.get('/api/rashifal', (req, res) => {
+    console.log(selfPushedNewsData)
     try {
         if (rashifal.length === 0) {
             res.status(404).json({ message: 'No Rashifal found' });
@@ -292,29 +295,61 @@ app.post('/api/post', async (req, res) => {
 
         const newNewsItem = {
             title,
-            titleAudio,
-            sourceImageUrl: '',
-            imageUrl,
+            titleAudio: titleAudio || null,
+            sourceImageUrl: sourceImageUrl || null,
+            imageUrl: imageUrl || null,
             id,
-            urls,
+            urls: urls || null,
             date: date,
-            content,
-            contentAudio,
-            nepaliDate: '',
-            tithi: '',
-            panchanga: '',
+            content: content || null,
+            contentAudio: contentAudio || null,
+            nepaliDate: nepaliDate || null,
+            tithi: tithi || null,
+            panchanga: panchanga || null,
         };
-
-        if (newsData.length >= 3) {
-            newsData.splice(2, 0, newNewsItem);
-        } else {
-            newsData.push(newNewsItem); 
-        }
+        console.log(newNewsItem)
+        selfPushedNewsData.push(newNewsItem);
 
         res.status(200).json({ message: 'Added successfully' });
     } catch (error) {
         console.error('Error handling the request:', error);
         res.status(500).json({ message: 'Internal Server Error' })
+    }
+});
+
+app.get('/api/post', (req, res) => {
+    try {
+        res.status(200).json(selfPushedNewsData);
+    } catch (error) {
+        console.error('Error fetching self-posted news:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
+app.put('/api/post/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, content, imageUrl, urls, date } = req.body;
+
+        const newsIndex = selfPushedNewsData.findIndex(newsItem => newsItem.id === id);
+
+        if (newsIndex === -1) {
+            return res.status(404).json({ message: 'News item not found' });
+        }
+
+        selfPushedNewsData[newsIndex] = {
+            ...selfPushedNewsData[newsIndex],
+            title: title || selfPushedNewsData[newsIndex].title,
+            content: content || selfPushedNewsData[newsIndex].content,
+            imageUrl: imageUrl || selfPushedNewsData[newsIndex].imageUrl,
+            urls: urls || selfPushedNewsData[newsIndex].urls,
+            date: date || selfPushedNewsData[newsIndex].date,
+        };
+
+        res.status(200).json({ message: 'News item updated successfully', updatedItem: selfPushedNewsData[newsIndex] });
+    } catch (error) {
+        console.error('Error updating news item:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 });
 
