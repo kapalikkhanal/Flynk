@@ -16,7 +16,6 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import WebView from 'react-native-webview';
-import ProtectedRoute from '../components/ProtectedRoute';
 
 const { width } = Dimensions.get('window');
 
@@ -45,6 +44,16 @@ const sourcesImages = {
   Barakhari: require('../../assets/images/sources/barakhari.jpg'),
   Setopati: require('../../assets/images/sources/setopati.jpg'),
   Himalkhabar: require('../../assets/images/sources/himalkhabar.png'),
+};
+
+const categoryImages = {
+  Politics: require('../../assets/icons/categories/politics.png'),
+  Health: require('../../assets/icons/categories/health.png'),
+  Bussiness: require('../../assets/icons/categories/bussiness.png'),
+  Sports: require('../../assets/icons/categories/sports.png'),
+  Stock: require('../../assets/icons/categories/stock.png'),
+  Technology: require('../../assets/icons/categories/technology.png'),
+  Weather: require('../../assets/icons/categories/weather.png'),
 };
 
 interface NewsItem {
@@ -80,14 +89,23 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const logos = [
-    { id: 1, imageUrl: sourcesImages.Hamropatro, link: 'https://www.hamropatro.com' },
-    { id: 2, imageUrl: sourcesImages.Kantipur, link: 'https://ekantipur.com' },
-    { id: 3, imageUrl: sourcesImages.Onlinekhabar, link: 'https://www.onlinekhabar.com' },
-    { id: 5, imageUrl: sourcesImages.Ratopati, link: 'https://www.ratopati.com' },
-    { id: 6, imageUrl: sourcesImages.Setopati, link: 'https://www.setopati.com' },
-    { id: 7, imageUrl: sourcesImages.Himalkhabar, link: 'https://www.himalkhabar.com' },
-    { id: 8, imageUrl: sourcesImages.Barakhari, link: 'https://baahrakhari.com' },
-    { id: 9, imageUrl: sourcesImages.Barakhari, link: 'https://news1.com' },
+    { id: 1, name: 'Hamropatro', imageUrl: sourcesImages.Hamropatro, link: 'https://www.hamropatro.com' },
+    { id: 2, name: 'Kantipur', imageUrl: sourcesImages.Kantipur, link: 'https://ekantipur.com' },
+    { id: 3, name: 'Onlinekhabar', imageUrl: sourcesImages.Onlinekhabar, link: 'https://www.onlinekhabar.com' },
+    { id: 5, name: 'Ratopati', imageUrl: sourcesImages.Ratopati, link: 'https://www.ratopati.com' },
+    { id: 6, name: 'Setopati', imageUrl: sourcesImages.Setopati, link: 'https://www.setopati.com' },
+    { id: 7, name: 'Himalkhabar', imageUrl: sourcesImages.Himalkhabar, link: 'https://www.himalkhabar.com' },
+    { id: 8, name: 'Barakhari', imageUrl: sourcesImages.Barakhari, link: 'https://baahrakhari.com' },
+  ];
+
+  const categories = [
+    { id: 1, name: 'Poilitics', imageUrl: categoryImages.Politics, link: 'https://www.hamropatro.com' },
+    { id: 2, name: 'Technology', imageUrl: categoryImages.Technology, link: 'https://ekantipur.com' },
+    { id: 3, name: 'Stock', imageUrl: categoryImages.Stock, link: 'https://www.onlinekhabar.com' },
+    { id: 5, name: 'Sports', imageUrl: categoryImages.Sports, link: 'https://www.ratopati.com' },
+    { id: 6, name: 'Bussiness', imageUrl: categoryImages.Bussiness, link: 'https://www.setopati.com' },
+    { id: 7, name: 'Health', imageUrl: categoryImages.Health, link: 'https://www.himalkhabar.com' },
+    { id: 8, name: 'Weather', imageUrl: categoryImages.Weather, link: 'https://baahrakhari.com' },
   ];
 
   const renderNewsItem = ({ item, index }: { item: NewsItem; index: number }) => (
@@ -123,8 +141,8 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const response = await axios.get('https://flynk.onrender.com/api/news');
-        const topFiveNews = response.data.slice(0, 5);
+        const response = await axios.get('https://flynk.onrender.com/api/top5');
+        const topFiveNews = response.data.top5News.slice(0, 5);
         setNews(topFiveNews);
         // console.log(topFiveNews)
       } catch (error) {
@@ -174,98 +192,144 @@ const Dashboard: React.FC = () => {
     setShowWebView(true);
   };
 
+  const handleCategoryClick = (category: { name: any; }) => {
+    console.log('Category clicked:', category.name);
+  };
+
   return (
-    <ProtectedRoute>
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#031e1f' }}>
-        <StatusBar barStyle="light-content" backgroundColor="#252525" />
-        {showWebView ? (
-          <View style={styles.webViewContainer}>
-            {webViewLoading && (
-              <View style={styles.webViewLoader}>
-                <ActivityIndicator size="large" color="#0000ff" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#031e1f' }}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" />
+      {showWebView ? (
+        <View style={styles.webViewContainer}>
+          {webViewLoading && (
+            <View style={styles.webViewLoader}>
+              <ActivityIndicator size="large" color="#0000ff" />
+            </View>
+          )}
+          <TouchableOpacity style={styles.closeButton} onPress={() => setShowWebView(false)}>
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
+          <WebView
+            source={{ uri: currentUrl }}
+            onLoadEnd={() => setWebViewLoading(false)}
+            style={{ opacity: webViewLoading ? 0 : 1 }}
+          />
+        </View>
+      ) : (
+        <FlatList
+          data={[]}
+          renderItem={null}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <View style={styles.container}>
+              {/* Search Bar */}
+              <TextInput
+                style={styles.searchBar}
+                placeholder="Search news..."
+                value={searchText}
+                onChangeText={(text) => setSearchText(text)}
+                placeholderTextColor="white"
+              />
+
+              {/* Display today's date */}
+              <View style={styles.dateContainer}>
+                <Text style={styles.dateHeading}>{news[0].nepaliDate}</Text>
+                <View style={styles.tithiContainer}>
+                  <Text style={styles.dateText}>{news[0].tithi}, </Text>
+                  <Text style={styles.dateText}>{news[0].panchanga}</Text>
+                </View>
               </View>
-            )}
-            <TouchableOpacity style={styles.closeButton} onPress={() => setShowWebView(false)}>
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
-            <WebView
-              source={{ uri: currentUrl }}
-              onLoadEnd={() => setWebViewLoading(false)}
-              style={{ opacity: webViewLoading ? 0 : 1 }}
-            />
-          </View>
-        ) : (
-          <FlatList
-            data={[]}
-            renderItem={null}
-            showsVerticalScrollIndicator={false}
-            ListHeaderComponent={
-              <View style={styles.container}>
-                {/* Search Bar */}
-                <TextInput
-                  style={styles.searchBar}
-                  placeholder="Search news..."
-                  value={searchText}
-                  onChangeText={(text) => setSearchText(text)}
-                  placeholderTextColor="white"
-                />
 
-                {/* Display today's date */}
-                <View style={styles.dateContainer}>
-                  <Text style={styles.dateHeading}>{news[0].nepaliDate}</Text>
-                  <View style={styles.tithiContainer}>
-                    <Text style={styles.dateText}>{news[0].tithi}, </Text>
-                    <Text style={styles.dateText}>{news[0].panchanga}</Text>
-                  </View>
-                </View>
-
-                {/* Top News Section */}
-                <View style={styles.trendingSection}>
-                  <Text style={styles.sectionTitle}>Latest News</Text>
-                  <FlatList
-                    data={news}
-                    renderItem={renderNewsItem}
-                    keyExtractor={(item) => item.id}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.trendingNewsList}
-                  />
-                </View>
-
-                {/* Horizontal Scroll Bar with Bubbles */}
+              {/* Top News Section */}
+              <View style={styles.trendingSection}>
+                <Text style={styles.sectionTitle}>Latest News</Text>
                 <FlatList
-                  data={logos}
-                  renderItem={({ item: logo }) => (
-                    <TouchableOpacity
-                      key={logo.id}
-                      onPress={() => handleLogoClick(logo.link)}
-                      style={styles.logoBubble}
-                    >
-                      <Image source={logo.imageUrl} style={styles.logoImage} />
-                    </TouchableOpacity>
-                  )}
-                  keyExtractor={(item) => item.id.toString()}
+                  data={news}
+                  renderItem={renderNewsItem}
+                  keyExtractor={(item) => item.id}
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.logoScrollView}
+                  contentContainerStyle={styles.trendingNewsList}
                 />
-
-                {/* Rashifal Section */}
-                <View style={styles.rashifalSection}>
-                  <Text style={styles.sectionTitle}>Today's Rashifal</Text>
-                  <FlatList
-                    data={rashifal}
-                    renderItem={renderRashifalItem}
-                    keyExtractor={(item) => item.sign}
-                    showsVerticalScrollIndicator={false}
-                  />
-                </View>
               </View>
-            }
-          />
-        )}
-      </SafeAreaView>
-    </ProtectedRoute>
+
+              {/* Horizontal Scroll Bar with Bubbles */}
+              <Text style={styles.sectionTitle}>Our Sources</Text>
+              <FlatList
+                data={logos}
+                renderItem={({ item: logo }) => (
+                  <TouchableOpacity
+                    key={logo.id}
+                    onPress={() => handleLogoClick(logo.link)}
+                    style={styles.logoBubble}
+                    className='border-2 border-white/25'
+                  >
+                    <View className='relative flex flex-col justify-center items-center'>
+                      <Image source={logo.imageUrl} style={styles.logoImage} />
+                      <Text className='absolute top-12 pt-1.5 w-28 border border-white text-center text-xs text-gray-400'>{logo.name}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item.id.toString()}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.logoScrollView}
+              />
+
+              {/* Horizontal Scroll bar with Categories  */}
+              <Text style={styles.sectionTitle}>Categories</Text>
+              <FlatList
+                data={categories}
+                renderItem={({ item: logo }) => (
+                  <TouchableOpacity
+                    key={logo.id}
+                    onPress={() => handleLogoClick(logo.link)}
+                    style={styles.logoBubble}
+                    className='border-2 border-orange-600'
+                  >
+                    <View className='relative flex flex-col justify-center items-center'>
+                      <Image source={logo.imageUrl} style={styles.categoryImage} />
+                      <Text className='absolute top-12 pt-1.5 w-20 text-center text-xs text-gray-400'>{logo.name}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item.id.toString()}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.logoScrollView}
+              />
+              {/* <FlatList
+                data={categories}
+                renderItem={({ item: category }) => (
+                  <TouchableOpacity
+                    key={category.id}
+                    onPress={() => handleCategoryClick(category)}
+                    style={styles.categoryCard}
+                  >
+                    <Image source={{ uri: category.imageUrl }} style={styles.categoryImage} />
+                    <Text style={styles.categoryText}>{category.name}</Text>
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item.id.toString()}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.categoryList}
+              /> */}
+
+              {/* Rashifal Section */}
+              <View style={styles.rashifalSection}>
+                <Text style={styles.sectionTitle}>Today's Rashifal</Text>
+                <FlatList
+                  data={rashifal}
+                  renderItem={renderRashifalItem}
+                  keyExtractor={(item) => item.sign}
+                  showsVerticalScrollIndicator={false}
+                />
+              </View>
+            </View>
+          }
+        />
+      )}
+    </SafeAreaView>
   );
 };
 
@@ -277,6 +341,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#031e1f',
     paddingHorizontal: 16,
     paddingTop: 32,
+    marginBottom: 60,
   },
   searchBar: {
     height: 50,
@@ -294,8 +359,8 @@ const styles = StyleSheet.create({
   },
   logoScrollView: {
     flexDirection: 'row',
-    marginBottom: 16,
-    marginTop: 20,
+    marginBottom: 24,
+    marginTop: 5,
   },
   logoBubble: {
     width: 60,
@@ -310,6 +375,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 2,
+    marginLeft:8,
+    marginBottom:6,
   },
   logoImage: {
     width: 50,
@@ -318,6 +385,7 @@ const styles = StyleSheet.create({
   },
   trendingSection: {
     marginTop: 8,
+    marginBottom: 16
   },
   sectionTitle: {
     fontSize: 22,
@@ -443,5 +511,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 18,
     fontWeight: '600'
+  },
+  categoryList: {
+    padding: 10,
+    paddingBottom: 20, // Add some space at the bottom
+  },
+  categoryCard: {
+    flexDirection: 'row', // Align image and text side by side
+    alignItems: 'center',
+    backgroundColor: '#fff', // Card background
+    padding: 15,
+    marginVertical: 8,
+    marginHorizontal: 16,
+    borderRadius: 10, // Rounded corners
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3, // Shadow for Android
+  },
+  categoryImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 40,
+  },
+  categoryText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
   },
 });

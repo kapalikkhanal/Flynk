@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, SafeAreaView, StyleSheet, StatusBar, Image, KeyboardAvoidingView, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-
 import { supabase } from './components/supabase'
 import Ionicons from '@expo/vector-icons/Ionicons';
+import useAuth from '@/hooks/useAuth';
 
 const Signup = () => {
   const [email, setEmail] = useState('');
@@ -12,6 +12,7 @@ const Signup = () => {
   const [phone, setPhone] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { isLoading, isAuthenticated } = useAuth();
 
   const navigation = useNavigation();
 
@@ -48,6 +49,19 @@ const Signup = () => {
       setLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (isAuthenticated) {
+    navigation.navigate('/(tabs)');
+    return null;
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#031e1f' }}>
@@ -136,6 +150,18 @@ const Signup = () => {
               <Text className='text-white/80 text-center text-lg'>
                 Already have an account? <Text className='font-bold text-lg text-yellow-600'>Sign In</Text>
               </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className='mt-2'
+              onPress={() => navigation.navigate('(tabs)')}
+            >
+              <View className='flex justify-center items-center flex-row'>
+              <Text className='text-white/80 text-center text-lg p-2'>
+                Skip
+              </Text>
+              <Ionicons name="arrow-forward-circle-outline" size={24} color="white" />
+              </View>
             </TouchableOpacity>
           </View>
         </ScrollView>

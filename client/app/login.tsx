@@ -6,40 +6,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './components/supabase'
 import { Redirect, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import useAuth from '@/hooks/useAuth';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isLoading, isAuthenticated } = useAuth();
 
   const navigation = useNavigation();
-  const router = useRouter();
-
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  useEffect(() => {
-    if (!isLoading) {
-      if (isAuthenticated) {
-        router.replace('/(tabs)');
-      }
-    }
-  }, [isLoading, isAuthenticated]);
-
-  const checkAuthStatus = async () => {
-    try {
-      const session = await AsyncStorage.getItem('supabaseToken');
-      setIsAuthenticated(!!session);
-    } catch (error) {
-      console.error('Error checking authentication status:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -49,6 +25,10 @@ const Login = () => {
     );
   }
 
+  if (isAuthenticated) {
+    navigation.navigate('/(tabs)');
+    return null;
+  }
 
   const handleLogin = async () => {
     try {
@@ -57,13 +37,13 @@ const Login = () => {
         email,
         password,
       });
-      if (!session) { Alert.alert('Login Error', error.message); }
+      if (!session) { Alert.alert('Login Error', (error as Error).message); }
 
       if (error) {
         Alert.alert('Login Error', error.message);
         throw error;
       }
-      const { user, access_token } = session;
+      const { user, access_token } = session as { user: { email: string }, access_token: string };
       const userEmail = user.email;
       console.log("Token", userEmail, access_token)
       await AsyncStorage.setItem('supabaseToken', access_token);
@@ -71,7 +51,7 @@ const Login = () => {
       setLoading(false);
       navigation.navigate('(tabs)');
     } catch (error) {
-      Alert.alert('Login Failed', error.message);
+      Alert.alert('Login Failed', (error as Error).message);
       setLoading(false);
     }
   };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Animated, Text, StyleSheet, Dimensions, ActivityIndicator, StatusBar, Modal, TouchableOpacity } from 'react-native';
+import { View, Animated, Text, StyleSheet, Dimensions, ScrollView, RefreshControl, ActivityIndicator, StatusBar, Modal, TouchableOpacity } from 'react-native';
 import NewsCard from '../components/newscard';
 import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import Animateds, {
@@ -11,10 +11,11 @@ import Animateds, {
   useAnimatedGestureHandler,
 } from 'react-native-reanimated';
 import WebView from 'react-native-webview';
-import ProtectedRoute from '../components/ProtectedRoute';
+import eventEmitter from '../components/eventEmitter'
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 
 const { height, width } = Dimensions.get('window');
-
 const PAGE_SIZE = 10;
 
 const News: React.FC = () => {
@@ -27,20 +28,35 @@ const News: React.FC = () => {
 
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const modalTranslateY = useSharedValue(0);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const flatListRef = useRef(null);
+
+  const [settings, setSettings] = useState({
+    mute: false,
+    autoScroll: false,
+    headings: false,
+    vibration: true
+  });
+
+  const hapticPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
+  };
 
   const fetchData = useCallback(async (page: any) => {
     try {
       setLoading(true);
       const response = await fetch(`https://flynk.onrender.com/api/news?page=${page}&limit=${PAGE_SIZE}`);
       const data = await response.json();
-      if (data.length < PAGE_SIZE) {
-        setHasMore(false); // No more data if less than PAGE_SIZE is returned
+      // console.log(data);
+      const news = data.news || [];
+      if (news.length < PAGE_SIZE || data.currentPage >= data.totalPages) {
+        setHasMore(false);
       }
-      setNewsData((prevData) => [...prevData, ...data]); // Append new data to existing data
+      setNewsData((prevData) => [...prevData, ...news]);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -51,6 +67,32 @@ const News: React.FC = () => {
   useEffect(() => {
     fetchData(page);
   }, [page, fetchData]);
+
+  useEffect(() => {
+
+    const fetchSettings = async () => {
+      try {
+        const storedSettings = await AsyncStorage.getItem('settings');
+        if (storedSettings) {
+          setSettings(JSON.parse(storedSettings));
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      }
+    };
+
+    fetchSettings();
+
+    const settingsListener = (changedSetting) => {
+      setSettings(prevSettings => ({ ...prevSettings, ...changedSetting }));
+    };
+
+    eventEmitter.on('settingsChanged', settingsListener);
+
+    return () => {
+      eventEmitter.off('settingsChanged', settingsListener);
+    };
+  }, []);
 
   const handleLoadMore = () => {
     if (hasMore && !loading) {
@@ -65,6 +107,9 @@ const News: React.FC = () => {
   }, []);
 
   const handleCloseWebView = () => {
+    if (settings.vibration) {
+      hapticPress();
+    }
     setShowWebView(false);
     setCurrentUrl('');
   };
@@ -106,6 +151,9 @@ const News: React.FC = () => {
         const newIndex = Math.round(event.nativeEvent.contentOffset.y / height);
         if (newIndex !== currentIndex) {
           setCurrentIndex(newIndex);
+          if (settings.vibration) {
+            hapticPress();
+          }
         }
       }
     }
@@ -129,7 +177,6 @@ const News: React.FC = () => {
       outputRange: [0.5, 1, 0.5],
       extrapolate: 'clamp',
     });
-
     return (
       <Animated.View style={{ transform: [{ scale }], opacity }}>
         <NewsCard
@@ -137,6 +184,7 @@ const News: React.FC = () => {
           onPress={handleOpenWebView}
           isVisible={index === currentIndex}
           stopAudio={index !== currentIndex}
+          onAudioComplete={handleAutoScroll}
         />
       </Animated.View>
     );
@@ -165,129 +213,152 @@ const News: React.FC = () => {
     ).start();
   }, [pulseAnim]);
 
-  if (loading) {
+  const onRefresh = async () => {
+    if (settings.vibration) {
+      hapticPress();
+    }
+    setRefreshing(true);
+    await fetchData(1);
+    setRefreshing(false);
+  };
+
+  const handleAutoScroll = useCallback(() => {
+    if (currentIndex < newsData.length - 1 && settings.autoScroll) {
+      flatListRef.current?.scrollToIndex({
+        index: currentIndex + 1,
+        animated: true,
+      });
+    }
+  }, [currentIndex, newsData.length, settings.autoScroll]);
+
+  if (loading && newsData.length === 0) {
     return (
-      // <View style={styles.loaderContainer}>
-      //   <ActivityIndicator size="large" color="#007bff" />
-      // </View>
       <View style={styles.cardContainer}>
         <View style={styles.imageContainer}>
           <Animated.View style={[styles.skeletonContainer, { opacity: pulseAnim }]}>
             <View style={styles.skeletonInner} />
           </Animated.View>
         </View>
-        <View className='h-1 bg-white w-full' />
+        <View style={{ height: 1, backgroundColor: 'white', width: '100%' }} />
         <View style={styles.contentContainer}>
-          {/* TIme  */}
-          <Animated.View className="h-4 mt-3 w-36 bg-gray-200 rounded-full dark:bg-gray-400 mb-6">
-
-          </Animated.View>
+          {/* Time  */}
+          <Animated.View style={{ height: 16, marginTop: 12, width: 144, backgroundColor: '#e0e0e0', borderRadius: 8, marginBottom: 24 }} />
 
           {/* Heading */}
-          <Animated.View className="h-8 w-full bg-gray-200 rounded-full dark:bg-gray-400 mb-3">
-
-          </Animated.View>
-          <Animated.View className="h-8 w-48 bg-gray-200 rounded-full dark:bg-gray-400 mb-6">
-
-          </Animated.View>
+          <Animated.View style={{ height: 32, width: '100%', backgroundColor: '#e0e0e0', borderRadius: 8, marginBottom: 12 }} />
+          <Animated.View style={{ height: 32, width: 192, backgroundColor: '#e0e0e0', borderRadius: 8, marginBottom: 24 }} />
 
           {/* Content  */}
-          <Animated.View className="h-4 w-full bg-gray-200 rounded-full dark:bg-gray-400 mb-3">
-
-          </Animated.View>
-          <Animated.View className="h-4 w-full bg-gray-200 rounded-full dark:bg-gray-400 mb-3">
-
-          </Animated.View>
-          <Animated.View className="h-4 w-full bg-gray-200 rounded-full dark:bg-gray-400 mb-3">
-
-          </Animated.View>
-          <Animated.View className="h-4 w-full bg-gray-200 rounded-full dark:bg-gray-400 mb-3">
-
-          </Animated.View>
-          <Animated.View className="h-4 w-full bg-gray-200 rounded-full dark:bg-gray-400 mb-3">
-
-          </Animated.View>
+          <Animated.View style={{ height: 16, width: '100%', backgroundColor: '#e0e0e0', borderRadius: 8, marginBottom: 12 }} />
+          <Animated.View style={{ height: 16, width: '100%', backgroundColor: '#e0e0e0', borderRadius: 8, marginBottom: 12 }} />
+          <Animated.View style={{ height: 16, width: '100%', backgroundColor: '#e0e0e0', borderRadius: 8, marginBottom: 12 }} />
+          <Animated.View style={{ height: 16, width: '100%', backgroundColor: '#e0e0e0', borderRadius: 8, marginBottom: 12 }} />
+          <Animated.View style={{ height: 16, width: '100%', backgroundColor: '#e0e0e0', borderRadius: 8, marginBottom: 12 }} />
 
           {/* Sources Text */}
-          <Animated.View className="h-4 w-36 bg-gray-200 rounded-full dark:bg-gray-400 mb-6">
+          <Animated.View style={{ height: 16, width: 144, backgroundColor: '#e0e0e0', borderRadius: 8, marginBottom: 24 }} />
 
-          </Animated.View>
-
-          <View className='flex flex-row space-x-4'>
-            {/* Sources Text */}
-            <Animated.View className="h-16 w-16 bg-gray-200 rounded-full dark:bg-gray-400">
-
-            </Animated.View>
-            <Animated.View className="h-16 w-16 bg-gray-200 rounded-full dark:bg-gray-400">
-
-            </Animated.View>
-
-            <Animated.View className="h-16 w-16 bg-gray-200 rounded-full dark:bg-gray-400">
-
-            </Animated.View>
-            <Animated.View className="h-16 w-16 bg-gray-200 rounded-full dark:bg-gray-400">
-
-            </Animated.View>
-            <Animated.View className="h-16 w-16 bg-gray-200 rounded-full dark:bg-gray-400">
-
-            </Animated.View>
-
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Animated.View style={{ height: 64, width: 64, backgroundColor: '#e0e0e0', borderRadius: 32 }} />
+            <Animated.View style={{ height: 64, width: 64, backgroundColor: '#e0e0e0', borderRadius: 32 }} />
+            <Animated.View style={{ height: 64, width: 64, backgroundColor: '#e0e0e0', borderRadius: 32 }} />
+            <Animated.View style={{ height: 64, width: 64, backgroundColor: '#e0e0e0', borderRadius: 32 }} />
+            <Animated.View style={{ height: 64, width: 64, backgroundColor: '#e0e0e0', borderRadius: 32 }} />
           </View>
         </View>
+      </View>
+    );
+  } else if (newsData.length === 0) {
+    return (
+      <View className='h-[100%] w-full flex flex-col justify-center items-center bg-[#031e1f]'>
+        <Text className='text-lg font-bold text-white'>No news available</Text>
+        <Text className='text-sm font-light text-white'>Check your internet connection and try again.</Text>
+        <TouchableOpacity style={styles.closeButton} onPress={fetchData}>
+          <Text className='text-lg text-white font-medium text-center pt-10'>Refresh</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <ProtectedRoute>
-      <View style={{ backgroundColor: '#031e1f' }}>
-        <StatusBar barStyle="light-content" backgroundColor="#252525" />
-        <Animated.FlatList
-          data={newsData}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          pagingEnabled
-          showsVerticalScrollIndicator={false}
-          snapToInterval={height}
-          decelerationRate="fast"
-          onScroll={handleScroll}
-          getItemLayout={getItemLayout}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-        />
-
-        <Modal
-          animationType="none"
-          transparent={true}
-          visible={showWebView}
-          onRequestClose={() => setShowWebView(false)}
+    <View
+      style={{ backgroundColor: '#031e1f' }}
+    >
+      <StatusBar barStyle="light-content" backgroundColor="#252525" />
+      <View className="absolute h-16 w-full top-0 z-50 flex justify-center items-center">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: '42%' }}
         >
-          <PanGestureHandler onGestureEvent={handleModalSwipe}>
-            <Animateds.View style={[styles.modalContainer, animatedModalStyle]}>
-              <TouchableOpacity style={styles.closeButton} onPress={handleCloseWebView}>
-                <View style={styles.closeLine}></View>
-                <Text className='text-sm text-gray-400 pt-2'>Swipe down to close</Text>
-              </TouchableOpacity>
-              <View style={styles.webViewContainer}>
-                {webViewLoading && (
-                  <View style={styles.webViewLoader}>
-                    <ActivityIndicator size="large" color="#007bff" />
-                  </View>
-                )}
-                <TouchableOpacity style={styles.closeButtonContainer} onPress={() => setShowWebView(false)}>
-                  <Text style={styles.closeButtonText}>Close</Text>
-                </TouchableOpacity>
-                <WebView
-                  source={{ uri: currentUrl }}
-                  onLoadEnd={() => setWebViewLoading(false)}
-                  style={{ opacity: webViewLoading ? 0 : 1 }}
-                />
-              </View>
-            </Animateds.View>
-          </PanGestureHandler>
-        </Modal>
+          <View className="flex-row items-end space-x-4">
+            <View className='absolute top-12 ml-1.5 h-1.5 w-1.5 rounded-full bg-red-600' />
+            <Text className="text-white font-extrabold text-md">For You</Text>
+            <Text className="text-white font-extrabold text-md">Market</Text>
+            <Text className="text-white font-extrabold text-md">Technology</Text>
+            <Text className="text-white font-extrabold text-md">Sports</Text>
+            <Text className="text-white font-extrabold text-md">Movies</Text>
+            <Text className="text-white font-extrabold text-md">International</Text>
+          </View>
+        </ScrollView>
       </View>
-    </ProtectedRoute>
+      <Animated.FlatList
+        ref={flatListRef}
+        data={newsData}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        pagingEnabled
+        showsVerticalScrollIndicator={false}
+        snapToInterval={height}
+        decelerationRate="fast"
+        onScroll={handleScroll}
+        getItemLayout={getItemLayout}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        removeClippedSubviews={true}
+        initialNumToRender={10}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#fff"
+            colors={['#fff']}
+          />
+        }
+      />
+
+      <Modal
+        animationType="none"
+        transparent={true}
+        visible={showWebView}
+        onRequestClose={() => setShowWebView(false)}
+      >
+        <PanGestureHandler onGestureEvent={handleModalSwipe}>
+          <Animateds.View style={[styles.modalContainer, animatedModalStyle]}>
+            <TouchableOpacity style={styles.closeButton} onPress={handleCloseWebView}>
+              <View style={styles.closeLine}></View>
+              <Text className='text-sm text-gray-400 pt-2'>Swipe down to close</Text>
+            </TouchableOpacity>
+            <View style={styles.webViewContainer}>
+              {webViewLoading && (
+                <View style={styles.webViewLoader}>
+                  <ActivityIndicator size="large" color="#007bff" />
+                </View>
+              )}
+              <TouchableOpacity style={styles.closeButtonContainer} onPress={() => { setShowWebView(false), hapticPress() }}>
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+              <WebView
+                source={{ uri: currentUrl }}
+                onLoadEnd={() => setWebViewLoading(false)}
+                style={{ opacity: webViewLoading ? 0 : 1 }}
+              />
+            </View>
+          </Animateds.View>
+        </PanGestureHandler>
+      </Modal>
+    </View>
   );
 };
 

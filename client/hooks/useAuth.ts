@@ -1,25 +1,34 @@
-// app/hooks/useAuth.ts
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const useAuth = () => {
-    const [token, setToken] = useState<string | null>(null);
+const useAuth = () => {
     const [isLoading, setIsLoading] = useState(true);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const router = useRouter();
 
     useEffect(() => {
-        const checkToken = async () => {
-            try {
-                const savedToken = await AsyncStorage.getItem('supabaseToken');
-                setToken(savedToken);
-            } catch (error) {
-                console.error('Failed to retrieve token', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        checkToken();
+        checkAuthStatus();
     }, []);
 
-    return { token, isLoading };
+    useEffect(() => {
+        if (!isLoading && isAuthenticated) {
+            router.replace('/(tabs)');
+        }
+    }, [isLoading, isAuthenticated, router]);
+
+    const checkAuthStatus = async () => {
+        try {
+            const session = await AsyncStorage.getItem('supabaseToken');
+            setIsAuthenticated(!!session);
+        } catch (error) {
+            console.error('Error checking authentication status:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return { isLoading, isAuthenticated };
 };
+
+export default useAuth;

@@ -1,22 +1,35 @@
-import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import React from 'react';
 import Icon from 'react-native-vector-icons/FontAwesome'; // Import the icon component
-import { useNavigation } from '@react-navigation/native';
-import ProtectedRoute from './components/ProtectedRoute';
+import { useRouter, Redirect } from 'expo-router';
+import useAuth from '@/hooks/useAuth';
+
 const Index = () => {
-    const navigation = useNavigation();
-    return (
-        <ProtectedRoute>
-            <View style={styles.container}>
-                <Image source={require('../assets/images/logo.png')} style={styles.logo} />
-                <Text style={styles.headline}>THE HEADLINES</Text>
-                <Text style={styles.slogan}>Getting News update is as easy as swiping.</Text>
-                <TouchableOpacity style={styles.button} onPress={() => { navigation.navigate('signup'); }}>
-                    <Text style={styles.buttonText}>Start Swiping</Text>
-                    <Icon name="arrow-right" size={20} color="#ffffff" style={styles.icon} />
-                </TouchableOpacity>
+    const router = useRouter();
+    const { isLoading, isAuthenticated } = useAuth();
+
+    if (isLoading) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" />
             </View>
-        </ProtectedRoute>
+        );
+    }
+
+    if (isAuthenticated) {
+        return <Redirect href="/(tabs)" />;
+    }
+
+    return (
+        <View style={styles.container}>
+            <Image source={require('../assets/images/logo.png')} style={styles.logo} />
+            <Text style={styles.headline}>THE HEADLINES</Text>
+            <Text style={styles.slogan}>Getting News update is as easy as swiping.</Text>
+            <TouchableOpacity style={styles.button} onPress={() => router.push('/signup')}>
+                <Text style={styles.buttonText}>Start Swiping</Text>
+                <Icon name="arrow-right" size={20} color="#ffffff" style={styles.icon} />
+            </TouchableOpacity>
+        </View>
     );
 };
 

@@ -1,7 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity, Animated, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { Audio } from 'expo-av';
 import Entypo from '@expo/vector-icons/Entypo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import eventEmitter from '../components/eventEmitter'
+import { useFocusEffect } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 
 const { height, width } = Dimensions.get('window');
 const fallbackImage = require('../../assets/images/fallback.png');
@@ -20,9 +24,10 @@ type NewsCardProps = {
     onPress: (url: string) => void;
     isVisible: boolean;
     stopAudio: boolean;
+    onAudioComplete: () => void;
 };
 
-const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible, stopAudio }) => {
+const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible, stopAudio, onAudioComplete }) => {
     const [imageUri, setImageUri] = useState<string | null>(item.imageUrl);
     const [animation] = useState(new Animated.Value(1));
     const [isLoading, setIsLoading] = useState(false);
@@ -31,8 +36,26 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible
 
     const isMounted = useRef(true);
     const audioOperationInProgress = useRef(false);
-    const [autoScroll, setAutoScroll] = useState(false);
-    const scrollViewRef = useRef<ScrollView>(null);
+    const [isSaved, setIsSaved] = useState(false)
+
+    const hapticPress = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
+    };
+
+    const [settings, setSettings] = useState({
+        mute: false,
+        autoScroll: false,
+        headings: false,
+        vibration: true
+    });
+
+    useFocusEffect(
+        useCallback(() => {
+            return () => {
+                handleStopAudio();
+            };
+        }, [])
+    );
 
     const handleImageError = () => {
         setImageUri(null);
@@ -61,6 +84,7 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible
 
     useEffect(() => {
         startAnimation();
+        checkIfSaved();
         return () => {
             isMounted.current = false;
             handleCleanup();
@@ -73,7 +97,33 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible
         } else {
             handleStopAudio();
         }
-    }, [isVisible, stopAudio]);
+    }, [isVisible, stopAudio, settings]);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const settingsString = await AsyncStorage.getItem('settings');
+
+                if (settingsString) {
+                    setSettings(JSON.parse(settingsString));
+                }
+            } catch (error) {
+                console.error('Error fetching settings:', error);
+            }
+        };
+
+        fetchSettings();
+
+        const settingsListener = (changedSetting: { mute: boolean; autoScroll: boolean; headings: boolean; }) => {
+            setSettings(prevSettings => ({ ...prevSettings, ...changedSetting }));
+        };
+
+        eventEmitter.on('settingsChanged', settingsListener);
+
+        return () => {
+            eventEmitter.off('settingsChanged', settingsListener);
+        };
+    }, []);
 
     const handleCleanup = async () => {
         if (soundObject.current) {
@@ -87,10 +137,12 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible
     };
 
     const handlePlayAudio = async (titleAudioBase64: string, contentAudioBase64: string) => {
-        if (audioOperationInProgress.current) return;
+        if (audioOperationInProgress.current || settings.mute) return;
         audioOperationInProgress.current = true;
 
         try {
+            console.log(settings);
+
             await handleStopAudio();
 
             if (!isMounted.current) return;
@@ -101,7 +153,10 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible
                 throw new Error('Invalid audio data.');
             }
 
+            // Create a new Audio.Sound instance
             soundObject.current = new Audio.Sound();
+
+            // Load and play title audio
             await soundObject.current.loadAsync({ uri: `data:audio/mp3;base64,${titleAudioBase64}` });
 
             if (!isMounted.current) return;
@@ -110,17 +165,17 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible
             setIsPlaying(true);
             await soundObject.current.playAsync();
 
+            // Handle playback status update
             soundObject.current.setOnPlaybackStatusUpdate(async (status) => {
                 if (status.didJustFinish) {
                     setIsPlaying(false);
 
-                    // Check if content audio data is valid
                     if (contentAudioBase64) {
                         setIsLoading(true);
 
                         try {
-                            // Load and play the content audio
-                            await soundObject.current.unloadAsync(); // Unload title audio first
+                            // Unload title audio and load content audio
+                            await soundObject.current.unloadAsync(); // Unload title audio
                             await soundObject.current.loadAsync({ uri: `data:audio/mp3;base64,${contentAudioBase64}` });
 
                             if (!isMounted.current) return;
@@ -129,10 +184,11 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible
                             setIsLoading(false);
                             await soundObject.current.playAsync();
 
-                            // Handle playback completion of content audio
+                            // Handle playback status update for content audio
                             soundObject.current.setOnPlaybackStatusUpdate((status) => {
                                 if (status.didJustFinish) {
                                     setIsPlaying(false);
+                                    onAudioComplete();
                                 }
                             });
                         } catch (error) {
@@ -140,6 +196,8 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible
                             setIsLoading(false);
                             setIsPlaying(false);
                         }
+                    } else {
+                        onAudioComplete();
                     }
                 }
             });
@@ -157,7 +215,9 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible
     const handleStopAudio = async () => {
         if (audioOperationInProgress.current) return;
         audioOperationInProgress.current = true;
-
+        if (settings.vibration) {
+            hapticPress();
+        }
         try {
             if (soundObject.current) {
                 const status = await soundObject.current.getStatusAsync();
@@ -180,6 +240,42 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible
         }
     };
 
+    const toggleSaveNews = async () => {
+        if (settings.vibration) {
+            hapticPress();
+        }
+        try {
+            const savedNewsString = await AsyncStorage.getItem('saved-news');
+            const savedNewsArray = savedNewsString ? JSON.parse(savedNewsString) : [];
+            const isAlreadySaved = savedNewsArray.some((news: any) => news.title === item.title);
+
+            if (isAlreadySaved) {
+                // Unsave the news
+                const updatedNewsArray = savedNewsArray.filter((news: any) => news.title !== item.title);
+                await AsyncStorage.setItem('saved-news', JSON.stringify(updatedNewsArray));
+                setIsSaved(false);
+            } else {
+                // Save the news
+                const updatedNewsArray = [...savedNewsArray, item];
+                await AsyncStorage.setItem('saved-news', JSON.stringify(updatedNewsArray));
+                setIsSaved(true);
+            }
+        } catch (error) {
+            console.error('Error saving/removing news:', error);
+        }
+    };
+
+    const checkIfSaved = async () => {
+        try {
+            const savedNewsString = await AsyncStorage.getItem('saved-news');
+            const savedNewsArray = savedNewsString ? JSON.parse(savedNewsString) : [];
+            const isAlreadySaved = savedNewsArray.some((news: any) => news.title === item.title);
+            setIsSaved(isAlreadySaved);
+        } catch (error) {
+            console.error('Error checking saved news:', error);
+        }
+    };
+
     return (
         <View style={styles.cardContainer}>
             <View style={styles.imageContainer}>
@@ -199,14 +295,29 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible
                     />
                 )}
             </View>
-            <View className='h-1 bg-white w-full' />
+
+            <View className=' relative h-1 bg-orange-600 w-full flex justify-center items-center'>
+                <View className='absolute left-5 -top-9 h-16 w-16 rounded-full flex justify-center items-center overflow-hidden z-50'>
+                    <View className="h-3/5 w-full bg-inherit absolute top-0" />
+                    <View className="h-2/5 w-full bg-orange-600 absolute bottom-0" />
+                    {item.sourceImageUrl && item.sourceImageUrl.length > 0 && (
+                        <TouchableOpacity
+                            onPress={() => { onPress(item.urls[0]), hapticPress() }}
+                        >
+                            <Image source={{ uri: item.sourceImageUrl[0] }} style={styles.bubbleImage} />
+                        </TouchableOpacity>
+                    )}
+                </View>
+                <Text className="w-full text-gray-300 text-[16px] absolute top-2 left-20 pl-2">{item.date}</Text>
+            </View>
+
             <ScrollView style={styles.contentContainer}>
-                <Text style={styles.date}>{item.date}</Text>
                 <Text style={styles.title}>{item.title}</Text>
                 <Text style={styles.content}>{item.content}</Text>
-                <Text style={styles.sourcetext}>समाचार स्रोतहरू:</Text>
-                <View style={styles.bubbleContainer}>
-                    {item.sourceImageUrl && item.sourceImageUrl.length > 0 && item.sourceImageUrl.map((url, index) => (
+                {/* <Text style={styles.date}>{item.date}</Text> */}
+                {/* <Text style={styles.sourcetext}>समाचार स्रोतहरू:</Text> */}
+                <View className='w-full' style={styles.bubbleContainer}>
+                    {/* {item.sourceImageUrl && item.sourceImageUrl.length > 0 && item.sourceImageUrl.map((url, index) => (
                         <TouchableOpacity
                             key={index}
                             onPress={() => onPress(item.urls[index])}
@@ -214,16 +325,34 @@ const NewsCard: React.FC<NewsCardProps> = React.memo(({ item, onPress, isVisible
                         >
                             <Image source={{ uri: url }} style={styles.bubbleImage} />
                         </TouchableOpacity>
-                    ))}
-
-                    {isLoading && (
-                        <ActivityIndicator size="small" color="#fff" style={styles.audioIndicator} />
-                    )}
-                    {isPlaying && (
-                        <Entypo name="sound" size={24} color="white" style={styles.audioIndicator} />
-                    )}
+                    ))} */}
+                    <View className='flex justify-center items-center w-7 h-7'>
+                        {isLoading && (
+                            <ActivityIndicator size="small" color="#fff" style={styles.audioIndicator} />
+                        )}
+                        {isPlaying && (
+                            <TouchableOpacity
+                                onPress={handleStopAudio}
+                                className='p-3'
+                            >
+                                <Entypo name="sound" size={24} color="white" style={styles.audioIndicator} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 </View>
             </ScrollView>
+            <TouchableOpacity onPress={toggleSaveNews}>
+                <View className='absolute bottom-24 right-5 p-3 flex justify-center items-center mt-2'>
+                    <Image
+                        source={
+                            isSaved
+                                ? require('../../assets/icons/save-fill.png')
+                                : require('../../assets/icons/save.png')
+                        }
+                        className='h-7 w-7'
+                    />
+                </View>
+            </TouchableOpacity>
         </View>
     );
 });
@@ -249,7 +378,7 @@ const styles = StyleSheet.create({
     },
     contentContainer: {
         flex: 1,
-        paddingTop: 10,
+        paddingTop: 40,
         paddingLeft: 15,
         paddingRight: 15,
     },
@@ -280,14 +409,11 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-start',
         alignItems: 'center',
         overflow: 'hidden',
-    },
-    bubbleItem: {
-        marginTop: 20,
-        marginRight: 16,
+        marginBottom: 10
     },
     bubbleImage: {
-        width: 50,
-        height: 50,
+        width: 56,
+        height: 56,
         borderRadius: 50,
     },
     button: {
