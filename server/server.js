@@ -31,7 +31,7 @@ function cleanUpCache(currentTitle) {
         if (title !== currentTitle) {
             fs.unlink(filePath, (err) => {
                 if (err) {
-                    console.error(`Failed to delete ${filePath}:`, err);
+                    console.error(`Failed to delete ${filePath}`);
                 }
             });
             audioCache.delete(title);
@@ -44,7 +44,7 @@ async function convertToSpeech(text, locale = "ne-NP") {
     if (audioCache.has(text)) {
         return audioCache.get(text);
     }
-    console.log("Title:", text)
+    // console.log("Title:", text)
     const formData = new URLSearchParams({
         locale,
         content: `<voice name="ne-NP-SagarNeural">${text}</voice>`,
@@ -164,14 +164,14 @@ async function scrapeNews() {
                     panchanga,
                 })
             } catch (error) {
-                console.error(`Error fetching details for ${url}:`, error);
+                console.error(`Error fetching details for ${url}.`);
             }
         }
         // console.log(selfPushedNewsData)
         newsData = [...news];
         newsData.push(...selfPushedNewsData);
     } catch (error) {
-        console.error('Error fetching the website:', error);
+        console.error('Error fetching the website.');
         throw error;
     }
 }
@@ -332,7 +332,7 @@ scrapeNews();
 scrapeRashifal()
 
 // Schedule a cron job to fetch news every 5 minutes
-cron.schedule('*/3 * * * *', async () => {
+cron.schedule('*/59 * * * *', async () => {
     try {
         await scrapeNews();
         console.log('News fetched and updated.');
@@ -385,7 +385,6 @@ app.get('/api/top5', (req, res) => {
 });
 
 app.get('/api/rashifal', (req, res) => {
-    console.log(selfPushedNewsData)
     try {
         if (rashifal.length === 0) {
             res.status(404).json({ message: 'No Rashifal found' });
@@ -470,7 +469,6 @@ app.post('/api/post', async (req, res) => {
             tithi: null,
             panchanga: null,
         };
-        console.log(newNewsItem)
         selfPushedNewsData.push(newNewsItem);
 
         res.status(200).json({ message: 'Added successfully' });

@@ -16,6 +16,10 @@ import { Video } from 'expo-av';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = 120;
+const numColumns = Math.floor(width / CARD_WIDTH);
+
 // Define the types for channel and state
 type Channel = {
     name: string;
@@ -27,7 +31,7 @@ type Channel = {
 const categories = {
     news: [
         {
-            name: 'Kantipur MAX',
+            name: 'Kantipur',
             uri: 'https:\/\/webott.viatv.com.np\/v0t1\/KntCineplexTv.stream\/playlist.m3u8',
             icon: 'https://ott1.viatv.com.np//images/channel/logo/Kantipur.jpg',
         },
@@ -42,12 +46,12 @@ const categories = {
             icon: 'https://ott1.viatv.com.np//images/channel/logo/PRIME_TIMES_HD.png',
         },
         {
-            name: 'Himalaya TV',
+            name: 'Himalaya',
             uri: 'https:\/\/webott.viatv.com.np\/v0t1\/HimalayaTv576.stream\/playlist.m3u8',
             icon: 'https://ott1.viatv.com.np//images/channel/logo/Himalaya_TV.jpg',
         },
         {
-            name: 'Avenues TV',
+            name: 'Avenues',
             uri: 'https:\/\/webott.viatv.com.np\/v0t1\/Avenews,.stream\/playlist.m3u8',
             icon: 'https://ott1.viatv.com.np//images/channel/logo/Avenues_TV.jpg',
         },
@@ -87,7 +91,7 @@ const categories = {
             icon: 'https://ott1.viatv.com.np//images/channel/logo/Janata_TV.jpg',
         },
         {
-            name: 'Mountain TV',
+            name: 'Mountain',
             uri: 'https:\/\/webott.viatv.com.np\/v0t1\/Mountain576.stream\/playlist.m3u8',
             icon: 'https://ott1.viatv.com.np//images/channel/logo/Mountain_TV.jpg',
         },
@@ -187,7 +191,7 @@ const TV = () => {
 
     const renderChannelItem = ({ item }: { item: Channel }) => (
         <TouchableOpacity
-            style={styles.channelCard}
+            style={[styles.channelCard, { width: width / numColumns - 20 }]}
             onPress={() => handleChannelChange(item.slug || item.name.toLowerCase().replace(' ', '-'))}
         >
             <Image source={{ uri: item.icon }} style={styles.channelIcon} />
@@ -241,10 +245,8 @@ const TV = () => {
                     </View>
                 )}
 
-                <ScrollView showsVerticalScrollIndicator={false}>
-                    {renderCategory('TV Channels', categories.news, 3)}
+                    {renderCategory('Channels', categories.news, 3)}
                     {/* {renderCategory('Movies', categories.movies)} */}
-                </ScrollView>
             </View>
         </SafeAreaView>
     );
@@ -259,7 +261,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#031e1f',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom:200
+        marginTop:140,
+        marginBottom: 300
     },
     video: {
         position: 'relative',
@@ -272,7 +275,7 @@ const styles = StyleSheet.create({
         // paddingHorizontal: 10,
     },
     categoryContainer: {
-        marginVertical: 20,
+        marginVertical: 10,
         paddingHorizontal: 10,
     },
     categoryHeading: {
@@ -280,7 +283,7 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         marginBottom: 10,
-        textAlign:'center'
+        textAlign: 'center'
     },
     channelCard: {
         backgroundColor: '#1e1e1e',

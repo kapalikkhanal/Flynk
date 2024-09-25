@@ -4,11 +4,13 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Ionicons } from '@expo/vector-icons';
 import TabBarIcon from '../components/tabBarIcon';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Dimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { TapGestureHandler } from 'react-native-gesture-handler';
 import eventEmitter from '../components/eventEmitter'
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const { width } = Dimensions.get('window');
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -65,8 +67,8 @@ export default function TabLayout() {
           backgroundColor: '#134053',
           height: 50,
           borderTopWidth: 0,
-          marginHorizontal: 5,
-          borderRadius: 24,
+          marginHorizontal: width < 375 ? 2 : 5,
+          borderRadius: width < 375 ? 16 : 24,
           shadowColor: '#000',
           shadowOpacity: 0.1,
           shadowOffset: { width: 0, height: 4 },
@@ -90,7 +92,17 @@ export default function TabLayout() {
           tabBarLabel: () => null,
           tabBarIcon: ({ color, focused }) => (
             <TapGestureHandler onActivated={hapticPress}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', height: 34, backgroundColor: `${focused ? '#fff' : 'transparent'}`, padding: 2.5, paddingLeft: 10, paddingRight: 10, marginLeft: 20, borderRadius: 20 }}>
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                height: 34,
+                backgroundColor: `${focused ? '#fff' : 'transparent'}`,
+                padding:  2.5,
+                paddingLeft: 10,
+                paddingRight:  10,
+                marginLeft:  12,
+                borderRadius: 20
+              }}>
                 <Ionicons
                   name={focused ? 'home-sharp' : 'home-outline'}
                   size={25}
@@ -121,7 +133,7 @@ export default function TabLayout() {
                 />
                 {focused && (
                   <Text style={{ fontSize: 12, marginLeft: 5, fontWeight: 'bold' }}>
-                    Live TV
+                    Live
                   </Text>
                 )}
               </View>
@@ -169,7 +181,7 @@ export default function TabLayout() {
                   color={focused ? "#070318" : color}
                 />
                 {focused && (
-                  <Text style={{ fontSize: 12, marginLeft: 4, fontWeight: 'bold' }}>
+                  <Text style={{ fontSize: 12, marginLeft: 2, fontWeight: 'bold' }}>
                     Saved
                   </Text>
                 )}
@@ -193,7 +205,7 @@ export default function TabLayout() {
                   color={focused ? "#070318" : color}
                 />
                 {focused && (
-                  <Text style={{ fontSize: 12, marginLeft: 4, fontWeight: 'bold' }}>
+                  <Text style={{ fontSize: 12, marginLeft: 2, fontWeight: 'bold' }}>
                     Profile
                   </Text>
                 )}
