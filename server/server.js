@@ -188,8 +188,23 @@ async function scrapeNews() {
 
 async function scrapeKantipurSportNews() {
     try {
-        const url = 'https://ekantipur.com/sports'; // URL of the sports news section
-        const { data } = await axios.get(url);
+        const url = 'https://ekantipur.com/sports';
+        const { data } = await axios.get(url, {
+            headers: {
+                ':authority': 'ai.ekantipur.com',
+                ':method': 'GET',
+                ':path': '/kantipur/recommendation/getnewsdigestjson/2h',
+                ':scheme': 'https',
+                'accept': 'text/javascript, text/html, application/xml, text/xml, */*',
+                'accept-encoding': 'gzip, deflate, br, zstd',
+                'accept-language': 'en-US,en;q=0.8',
+                'cache-control': 'no-cache',
+                'referer': 'https://ekantipur.com/',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-site',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+            },
+        });
         const $ = cheerio.load(data);
         const articleUrls = [];
         const sportNewsData = [];
