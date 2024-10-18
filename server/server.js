@@ -285,7 +285,8 @@ async function scrapeKantipurSportNews() {
         // Launch a new browser instance
         browser = await puppeteer.launch({
             headless: true, // Run in headless mode, set to false for debugging
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            executablePath: '/chromedriver.exe'
         });
 
         // Open a new page
