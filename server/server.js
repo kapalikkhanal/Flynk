@@ -21,6 +21,7 @@ app.use(cors())
 app.use(express.static('public'));
 
 let newsData = [];
+let sportNews = [];
 let selfPushedNewsData = [];
 let rashifal = [];
 let audioCache = new Map();
@@ -39,12 +40,21 @@ function cleanUpCache(currentTitle) {
     }
 }
 
+const generateRandomId = () => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 20; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+};
+
 async function convertToSpeech(text, locale = "ne-NP") {
 
     if (audioCache.has(text)) {
         return audioCache.get(text);
     }
-    // console.log("Title:", text)
+    console.log("Title:", text)
     const formData = new URLSearchParams({
         locale,
         content: `<voice name="ne-NP-SagarNeural">${text}</voice>`,
@@ -129,7 +139,7 @@ async function scrapeNews() {
 
         const currentTitles = articleUrls.map(article => article.title);
         cleanUpCache(currentTitles);
-        
+
         for (let article of articleUrls) {
             const { title, link, imageUrl, id, sourceImageUrl } = article;
             // 
@@ -176,6 +186,82 @@ async function scrapeNews() {
     }
 }
 
+async function scrapeKantipurSportNews() {
+    try {
+        const url = 'https://ekantipur.com/sports'; // URL of the sports news section
+        const { data } = await axios.get(url);
+        const $ = cheerio.load(data);
+        const articleUrls = [];
+        const sportNewsData = [];
+        const uniqueIds = new Set();
+
+        // Adjust the selector based on the structure of sports news
+        $('.col-xs-10 .normal').each(async (i, element) => {
+            const newsCard = $(element);
+            const title = newsCard.find('.teaser h2 a').text().trim();
+            const link = newsCard.find('.teaser h2 a').attr('href');
+            const fullLink = ["https://ekantipur.com" + link];
+
+            const imageElement = newsCard.find('.image figure a img');
+            let imageUrl = '';
+            if (imageElement.length) {
+                imageUrl = imageElement.attr('src') || imageElement.attr('data-src');
+            }
+
+            const content = newsCard.find('.teaser p').text().trim();
+            const sourceImages = ['https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRupQwELqDYhcmL8weYk7SrxlqoDbVZX9OhJA&s'];
+
+            // Generate random ID
+            const id = generateRandomId();
+
+            if (!uniqueIds.has(id)) { // Check if the ID is already in the set
+                uniqueIds.add(id); // Add ID to the set to prevent duplicates
+                articleUrls.push({
+                    title,
+                    content,
+                    link: fullLink,
+                    sourceImageUrl: sourceImages,
+                    id,
+                    imageUrl,
+                });
+            }
+
+            // console.log(content)
+        });
+
+        const currentTitles = articleUrls.map(article => article.title);
+        cleanUpCache(currentTitles);
+
+        for (let article of articleUrls) {
+            const { title, content, link, imageUrl, id, sourceImageUrl } = article;
+            try {
+
+                const titleAudio = await convertToSpeech(title);
+                const contentAudio = await convertToSpeech(content);
+
+                sportNewsData.push({
+                    title,
+                    titleAudio: titleAudio || null,
+                    sourceImageUrl,
+                    imageUrl,
+                    id,
+                    urls: link,
+                    date: 'N/A',
+                    content: content,
+                    contentAudio: contentAudio || null
+                });
+            } catch (error) {
+                console.error(`Error fetching details for ${link}.`);
+            }
+        }
+
+        sportNews = [...sportNewsData];
+    } catch (error) {
+        console.error('Error fetching the website.');
+        throw error;
+    }
+}
+
 async function scrapeRashifal() {
     try {
         const { data } = await axios.get('https://www.hamropatro.com/rashifal');
@@ -198,7 +284,6 @@ async function scrapeRashifal() {
         console.error('Error scraping Rashifal data:', error.message);
     }
 };
-
 
 function parseDuration(durationString) {
     const durationParts = durationString.match(/(\d+)([h|m])/g);
@@ -330,11 +415,13 @@ async function paraphraser(input) {
 
 scrapeNews();
 scrapeRashifal()
+scrapeKantipurSportNews();
 
 // Schedule a cron job to fetch news every 5 minutes
 cron.schedule('*/59 * * * *', async () => {
     try {
         await scrapeNews();
+        await scrapeKantipurSportNews();
         console.log('News fetched and updated.');
     } catch (error) {
         console.error('Error in cron job:', error);
@@ -353,6 +440,26 @@ app.get('/api/news', (req, res) => {
             currentPage: parseInt(page),
             totalPages: Math.ceil(newsData.length / limit),
             totalNews: newsData.length,
+            news: paginatedNews,
+        });
+    } catch (error) {
+        console.error('Error fetching the news:', error);
+        res.status(500).json({ error: 'Failed to get news' });
+    }
+});
+
+app.get('/api/sportsNews', (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query; // Get page and limit from query params
+        const startIndex = (page - 1) * limit;     // Calculate starting index
+        const endIndex = page * limit;             // Calculate ending index
+
+        const paginatedNews = sportNews.slice(startIndex, endIndex); // Slice the news data for pagination
+
+        res.json({
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(sportNews.length / limit),
+            totalNews: sportNews.length,
             news: paginatedNews,
         });
     } catch (error) {
