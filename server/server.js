@@ -9,6 +9,7 @@ const compression = require('compression');
 const moment = require('moment');
 const fs = require('fs');
 const https = require('https');
+const puppeteer = require('puppeteer');
 
 const app = express();
 const PORT = 3001;
@@ -191,71 +192,165 @@ const agent = new https.Agent({
     rejectUnauthorized: false
 });
 
+// async function scrapeKantipurSportNews() {
+//     try {
+//         const url = 'https://ekantipur.com/sports';
+//         const { data } = await axios.get(url, {
+//             httpsAgent: agent,
+//             timeout: 10000,
+//             headers: {
+//                 "Host": 'ekantipur.com',
+//                 'referer': 'https://ekantipur.com/',
+//                 "Cookie":"cf_clearance=GpLsc8hygjCcYacLLEgtGQouwCDepulSJJcJ4Kl.T_M-1729238974-1.2.1.1-QhydHd7srBW4IZf9ffe7E03lqAXR3Mua_ECLSAiQjQ4EqKlaBrf8ILN48sAPBxw5UFGt_Bk.7ZQyg3NFPZW1_ErXFh2aMsp7hcxq7.7XAJQXrqij6qjs7GtPHYj2hqxwuNLItY_HM0N9lFMX01xdUfZEtT9n8svHwacxsbrGskWTvuDNnE0.RajcjSuzsgiYZ9947.zXXSVz5yBH8eL_KsFOMWLq0Yltaa01mf1RJGPvYwZp6DCcAabj.0S.tBN1z4jU8RbdRuLyH3g58Jt8NcpAkuEvSvttVTTwLWrGq4JDYZaZiH6WWJe0fPeH8ABCZS6kjLl9KIub5dLGdRnYKH4XniBaeTv2aque2QCpzcE.D8LrlYGQ4MP7SF5QwpfJrqsEQdvIlcLViqiPXMT96g",
+//                 'sec-fetch-mode': 'cors',
+//                 'sec-fetch-site': 'same-site',
+//                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+//             },
+//         });
+//         const $ = cheerio.load(data);
+//         const articleUrls = [];
+//         const sportNewsData = [];
+//         const uniqueIds = new Set();
+
+//         // Adjust the selector based on the structure of sports news
+//         $('.col-xs-10 .normal').each(async (i, element) => {
+//             const newsCard = $(element);
+//             const title = newsCard.find('.teaser h2 a').text().trim();
+//             const link = newsCard.find('.teaser h2 a').attr('href');
+//             const fullLink = ["https://ekantipur.com" + link];
+
+//             const imageElement = newsCard.find('.image figure a img');
+//             let imageUrl = '';
+//             if (imageElement.length) {
+//                 imageUrl = imageElement.attr('src') || imageElement.attr('data-src');
+//             }
+
+//             const content = newsCard.find('.teaser p').text().trim();
+//             const sourceImages = ['https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRupQwELqDYhcmL8weYk7SrxlqoDbVZX9OhJA&s'];
+
+//             // Generate random ID
+//             const id = generateRandomId();
+
+//             if (!uniqueIds.has(id)) { // Check if the ID is already in the set
+//                 uniqueIds.add(id); // Add ID to the set to prevent duplicates
+//                 articleUrls.push({
+//                     title,
+//                     content,
+//                     link: fullLink,
+//                     sourceImageUrl: sourceImages,
+//                     id,
+//                     imageUrl,
+//                 });
+//             }
+
+//             // console.log(content)
+//         });
+
+//         const currentTitles = articleUrls.map(article => article.title);
+//         cleanUpCache(currentTitles);
+
+//         for (let article of articleUrls) {
+//             const { title, content, link, imageUrl, id, sourceImageUrl } = article;
+//             try {
+
+//                 const titleAudio = await convertToSpeech(title);
+//                 const contentAudio = await convertToSpeech(content);
+
+//                 sportNewsData.push({
+//                     title,
+//                     titleAudio: titleAudio || null,
+//                     sourceImageUrl,
+//                     imageUrl,
+//                     id,
+//                     urls: link,
+//                     date: 'N/A',
+//                     content: content,
+//                     contentAudio: contentAudio || null
+//                 });
+//             } catch (error) {
+//                 console.error(`Error fetching details for ${link}.`);
+//             }
+//         }
+
+//         sportNews = [...sportNewsData];
+//     } catch (error) {
+//         console.error('Error fetching the website.');
+//         throw error;
+//     }
+// }
+
 async function scrapeKantipurSportNews() {
+    let browser;
     try {
-        const url = 'https://ekantipur.com/sports';
-        const { data } = await axios.get(url, {
-            httpsAgent: agent,
-            timeout: 10000,
-            headers: {
-                "Host": 'ekantipur.com',
-                'referer': 'https://ekantipur.com/',
-                "Cookie":"cf_clearance=GpLsc8hygjCcYacLLEgtGQouwCDepulSJJcJ4Kl.T_M-1729238974-1.2.1.1-QhydHd7srBW4IZf9ffe7E03lqAXR3Mua_ECLSAiQjQ4EqKlaBrf8ILN48sAPBxw5UFGt_Bk.7ZQyg3NFPZW1_ErXFh2aMsp7hcxq7.7XAJQXrqij6qjs7GtPHYj2hqxwuNLItY_HM0N9lFMX01xdUfZEtT9n8svHwacxsbrGskWTvuDNnE0.RajcjSuzsgiYZ9947.zXXSVz5yBH8eL_KsFOMWLq0Yltaa01mf1RJGPvYwZp6DCcAabj.0S.tBN1z4jU8RbdRuLyH3g58Jt8NcpAkuEvSvttVTTwLWrGq4JDYZaZiH6WWJe0fPeH8ABCZS6kjLl9KIub5dLGdRnYKH4XniBaeTv2aque2QCpzcE.D8LrlYGQ4MP7SF5QwpfJrqsEQdvIlcLViqiPXMT96g",
-                'sec-fetch-mode': 'cors',
-                'sec-fetch-site': 'same-site',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
-            },
-        });
-        const $ = cheerio.load(data);
-        const articleUrls = [];
-        const sportNewsData = [];
-        const uniqueIds = new Set();
-
-        // Adjust the selector based on the structure of sports news
-        $('.col-xs-10 .normal').each(async (i, element) => {
-            const newsCard = $(element);
-            const title = newsCard.find('.teaser h2 a').text().trim();
-            const link = newsCard.find('.teaser h2 a').attr('href');
-            const fullLink = ["https://ekantipur.com" + link];
-
-            const imageElement = newsCard.find('.image figure a img');
-            let imageUrl = '';
-            if (imageElement.length) {
-                imageUrl = imageElement.attr('src') || imageElement.attr('data-src');
-            }
-
-            const content = newsCard.find('.teaser p').text().trim();
-            const sourceImages = ['https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRupQwELqDYhcmL8weYk7SrxlqoDbVZX9OhJA&s'];
-
-            // Generate random ID
-            const id = generateRandomId();
-
-            if (!uniqueIds.has(id)) { // Check if the ID is already in the set
-                uniqueIds.add(id); // Add ID to the set to prevent duplicates
-                articleUrls.push({
-                    title,
-                    content,
-                    link: fullLink,
-                    sourceImageUrl: sourceImages,
-                    id,
-                    imageUrl,
-                });
-            }
-
-            // console.log(content)
+        // Launch a new browser instance
+        browser = await puppeteer.launch({
+            headless: true, // Run in headless mode, set to false for debugging
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
-        const currentTitles = articleUrls.map(article => article.title);
+        // Open a new page
+        const page = await browser.newPage();
+
+        // Set a custom User-Agent to mimic a real browser
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36');
+
+        // Navigate to the sports section of Kantipur
+        await page.goto('https://ekantipur.com/sports', {
+            waitUntil: 'networkidle2', // Wait until the network is idle
+            timeout: 0, // Disable the timeout
+        });
+        // Wait for articles to be loaded (adjust the selector if needed)
+        await page.waitForSelector('.normal');
+
+        // Scrape the page content
+        const sportNewsData = await page.evaluate(() => {
+            const articleUrls = [];
+            const uniqueIds = new Set();
+            document.querySelectorAll('.normal').forEach((element) => {
+                const newsCard = element;
+                const title = newsCard.querySelector('.teaser h2 a')?.textContent?.trim();
+                const link = newsCard.querySelector('.teaser h2 a')?.getAttribute('href');
+                const fullLink = link ? "https://ekantipur.com" + link : '';
+
+                const imageElement = newsCard.querySelector('.image figure a img');
+                let imageUrl = imageElement?.getAttribute('src') || imageElement?.getAttribute('data-src') || '';
+
+                const content = newsCard.querySelector('.teaser p')?.textContent?.trim();
+                const sourceImages = ['https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRupQwELqDYhcmL8weYk7SrxlqoDbVZX9OhJA&s'];
+
+                // Generate random ID
+                const id = [...Array(20)].map(() => Math.random().toString(36)[2]).join('');
+                
+                if (!uniqueIds.has(id)) {
+                    uniqueIds.add(id);
+                    articleUrls.push({
+                        title,
+                        content,
+                        link: fullLink,
+                        sourceImageUrl: sourceImages,
+                        id,
+                        imageUrl,
+                    });
+                }
+            });
+            return articleUrls;
+        });
+
+        const currentTitles = sportNewsData.map(article => article.title);
         cleanUpCache(currentTitles);
 
-        for (let article of articleUrls) {
-            const { title, content, link, imageUrl, id, sourceImageUrl } = article;
-            try {
+        const finalSportNewsData = [];
 
+        for (let article of sportNewsData) {
+            const { title, content, link, imageUrl, id, sourceImageUrl } = article;
+            // console.log("Data", title, content, link, imageUrl, id, sourceImageUrl)
+            try {
                 const titleAudio = await convertToSpeech(title);
                 const contentAudio = await convertToSpeech(content);
+                // const titleAudio = '';
+                // const contentAudio = '';
 
-                sportNewsData.push({
+                finalSportNewsData.push({
                     title,
                     titleAudio: titleAudio || null,
                     sourceImageUrl,
@@ -267,16 +362,21 @@ async function scrapeKantipurSportNews() {
                     contentAudio: contentAudio || null
                 });
             } catch (error) {
-                console.error(`Error fetching details for ${link}.`);
+                console.error(`Error processing article: ${link}`, error);
             }
         }
-
-        sportNews = [...sportNewsData];
+        // Store the scraped news
+        sportNews = [...finalSportNewsData];
+        
     } catch (error) {
-        console.error('Error fetching the website.');
-        throw error;
+        console.error('Error scraping Kantipur Sports News.', error);
+    } finally {
+        if (browser) {
+            await browser.close(); // Ensure the browser is closed to avoid memory leaks
+        }
     }
 }
+
 
 async function scrapeRashifal() {
     try {
