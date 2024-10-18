@@ -191,10 +191,6 @@ async function scrapeKantipurSportNews() {
         const url = 'https://ekantipur.com/sports';
         const { data } = await axios.get(url, {
             headers: {
-                ':authority': 'ai.ekantipur.com',
-                ':method': 'GET',
-                ':path': '/kantipur/recommendation/getnewsdigestjson/2h',
-                ':scheme': 'https',
                 'accept': 'text/javascript, text/html, application/xml, text/xml, */*',
                 'accept-encoding': 'gzip, deflate, br, zstd',
                 'accept-language': 'en-US,en;q=0.8',
