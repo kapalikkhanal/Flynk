@@ -10,6 +10,7 @@ const moment = require('moment');
 const fs = require('fs');
 const https = require('https');
 const puppeteer = require('puppeteer');
+require("dotenv").config();
 
 const app = express();
 const PORT = 3001;
@@ -188,10 +189,6 @@ async function scrapeNews() {
     }
 }
 
-const agent = new https.Agent({
-    rejectUnauthorized: false
-});
-
 // async function scrapeKantipurSportNews() {
 //     try {
 //         const url = 'https://ekantipur.com/sports';
@@ -285,8 +282,15 @@ async function scrapeKantipurSportNews() {
         // Launch a new browser instance
         browser = await puppeteer.launch({
             headless: true, // Run in headless mode, set to false for debugging
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            executablePath: '/chromedriver.exe'
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--single-process',
+                '--no-zygote',
+            ],
+            executablePath: process.env.NODE_ENV === "production"
+                ? process.env.PUPPETEER_EXECUTABLE_PATH
+                : puppeteer.executablePath(),
         });
 
         // Open a new page
@@ -321,7 +325,7 @@ async function scrapeKantipurSportNews() {
 
                 // Generate random ID
                 const id = [...Array(20)].map(() => Math.random().toString(36)[2]).join('');
-                
+
                 if (!uniqueIds.has(id)) {
                     uniqueIds.add(id);
                     articleUrls.push({
@@ -368,7 +372,7 @@ async function scrapeKantipurSportNews() {
         }
         // Store the scraped news
         sportNews = [...finalSportNewsData];
-        
+
     } catch (error) {
         console.error('Error scraping Kantipur Sports News.', error);
     } finally {
