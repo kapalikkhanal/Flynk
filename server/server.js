@@ -8,6 +8,7 @@ const { URLSearchParams } = require("url");
 const compression = require('compression');
 const moment = require('moment');
 const fs = require('fs');
+const https = require('https');
 
 const app = express();
 const PORT = 3001;
@@ -186,10 +187,16 @@ async function scrapeNews() {
     }
 }
 
+const agent = new https.Agent({
+    rejectUnauthorized: false
+});
+
 async function scrapeKantipurSportNews() {
     try {
         const url = 'https://ekantipur.com/sports';
         const { data } = await axios.get(url, {
+            httpsAgent: agent,
+            timeout: 10000,
             headers: {
                 "Host": 'ekantipur.com',
                 'referer': 'https://ekantipur.com/',
