@@ -200,6 +200,7 @@ async function scrapeKantipurSportNews() {
             headers: {
                 "Host": 'ekantipur.com',
                 'referer': 'https://ekantipur.com/',
+                "Cookie":"cf_clearance=GpLsc8hygjCcYacLLEgtGQouwCDepulSJJcJ4Kl.T_M-1729238974-1.2.1.1-QhydHd7srBW4IZf9ffe7E03lqAXR3Mua_ECLSAiQjQ4EqKlaBrf8ILN48sAPBxw5UFGt_Bk.7ZQyg3NFPZW1_ErXFh2aMsp7hcxq7.7XAJQXrqij6qjs7GtPHYj2hqxwuNLItY_HM0N9lFMX01xdUfZEtT9n8svHwacxsbrGskWTvuDNnE0.RajcjSuzsgiYZ9947.zXXSVz5yBH8eL_KsFOMWLq0Yltaa01mf1RJGPvYwZp6DCcAabj.0S.tBN1z4jU8RbdRuLyH3g58Jt8NcpAkuEvSvttVTTwLWrGq4JDYZaZiH6WWJe0fPeH8ABCZS6kjLl9KIub5dLGdRnYKH4XniBaeTv2aque2QCpzcE.D8LrlYGQ4MP7SF5QwpfJrqsEQdvIlcLViqiPXMT96g",
                 'sec-fetch-mode': 'cors',
                 'sec-fetch-site': 'same-site',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
