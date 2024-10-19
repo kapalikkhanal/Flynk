@@ -30,13 +30,20 @@ app.use('/api/tech', techRoutes);
 app.use('/api/tts', ttsRoutes);
 app.use('/api/paraphrase', paraphraseRoutes);
 
-// Schedule scraping jobs
-cron.schedule('*/59 * * * *', async () => {
+async function runScrapingFunctionsSequentially() {
     try {
         await scrapeRashifal();
         await scrapeNews();
         await scrapeKantipurSportNews();
         await scrapeTechnologyNews();
+    } catch (error) {
+        console.error('Error in scraping:', error);
+    }
+}
+
+cron.schedule('*/59 * * * *', async () => {
+    try {
+        runScrapingFunctionsSequentially();
         console.log('Content fetched and updated.');
     } catch (error) {
         console.error('Error in cron job:', error);

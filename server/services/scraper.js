@@ -312,10 +312,19 @@ async function scrapeRashifal() {
     }
 };
 
-scrapeRashifal();
-scrapeNews();
-scrapeKantipurSportNews();
-scrapeTechnologyNews();
+async function runScrapingFunctionsSequentially() {
+    try {
+        await scrapeRashifal();          
+        await scrapeNews();              
+        await scrapeKantipurSportNews(); 
+        await scrapeTechnologyNews();    
+    } catch (error) {
+        console.error('Error in scraping:', error);
+    }
+}
+
+runScrapingFunctionsSequentially();
+
 
 module.exports = {
     scrapeNews,
