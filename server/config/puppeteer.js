@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 
 async function launchPuppeteer() {
     return await puppeteer.launch({
-        headless: false,
+        headless: true,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
