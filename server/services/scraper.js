@@ -8,8 +8,11 @@ const { paraphraseText } = require('../services/paraphaser')
 let newsData = [];
 let sportNews = [];
 let techNews = [];
+let financeNews = [];
 let selfPushedNewsData = [];
 let rashifal = [];
+let nepse = [];
+let gold = [];
 
 const url = 'https://www.hamropatro.com/';
 const API_URL = "https://app.micmonster.com/restapi/create";
@@ -131,7 +134,7 @@ async function scrapeKantipurSportNews() {
                 const newsCard = element;
                 const title = newsCard.querySelector('.teaser h2 a')?.textContent?.trim();
                 const link = newsCard.querySelector('.teaser h2 a')?.getAttribute('href');
-                const fullLink = link ? "https://ekantipur.com" + link : '';
+                const fullLink = link ? [`https://ekantipur.com + ${link}`] : [];
 
                 const imageElement = newsCard.querySelector('.image figure a img');
                 let imageUrl = imageElement?.getAttribute('src') || imageElement?.getAttribute('data-src') || '';
@@ -182,7 +185,7 @@ async function scrapeKantipurSportNews() {
                     contentAudio: contentAudio || null
                 });
             } catch (error) {
-                console.error(`Error processing article: ${link}`, error);
+                console.error(`Error processing article: ${link}`);
             }
         }
 
@@ -190,6 +193,95 @@ async function scrapeKantipurSportNews() {
         console.log('All sports news data scraped successfully');
     } catch (error) {
         console.error('Error scraping Kantipur Sports News.', error);
+    } finally {
+        if (browser) {
+            await browser.close(); // Ensure the browser is closed to avoid memory leaks
+        }
+    }
+}
+
+async function scrapeKantipurFinanceNews() {
+    console.log('Scraping Finance News Data...');
+    const browser = await launchPuppeteer();
+    try {
+        const page = await browser.newPage();
+
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36');
+
+        await page.goto('https://ekantipur.com/business', {
+            waitUntil: 'networkidle2',
+            timeout: 0,
+        });
+
+        await page.waitForSelector('.normal');
+
+        const financeNewsData = await page.evaluate(() => {
+            const articleUrls = [];
+            const uniqueIds = new Set();
+            document.querySelectorAll('.normal').forEach((element) => {
+                const newsCard = element;
+                const title = newsCard.querySelector('.teaser h2 a')?.textContent?.trim();
+                const link = newsCard.querySelector('.teaser h2 a')?.getAttribute('href');
+                const fullLink = link ? [`https://ekantipur.com + ${link}`] : [];
+
+                const imageElement = newsCard.querySelector('.image figure a img');
+                let imageUrl = imageElement?.getAttribute('src') || imageElement?.getAttribute('data-src') || '';
+
+                const content = newsCard.querySelector('.teaser p')?.textContent?.trim();
+                const sourceImages = ['https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRupQwELqDYhcmL8weYk7SrxlqoDbVZX9OhJA&s'];
+
+                const id = [...Array(20)].map(() => Math.random().toString(36)[2]).join('');
+
+                if (!uniqueIds.has(id)) {
+                    uniqueIds.add(id);
+                    articleUrls.push({
+                        title,
+                        content,
+                        link: fullLink,
+                        sourceImageUrl: sourceImages,
+                        id,
+                        imageUrl,
+                    });
+                }
+            });
+            return articleUrls;
+        });
+
+        // const currentTitles = financeNewsData.map(article => article.title);
+        // cleanUpCache(currentTitles);
+
+        const finalfinanceNewsData = [];
+
+        for (let article of financeNewsData) {
+            const { title, content, link, imageUrl, id, sourceImageUrl } = article;
+
+            try {
+                const titleAudio = await convertToSpeech(title);
+                const contentAudio = await convertToSpeech(content);
+                // const titleAudio = '';
+                // const contentAudio = '';
+
+                finalfinanceNewsData.push({
+                    title,
+                    titleAudio: titleAudio || null,
+                    sourceImageUrl,
+                    imageUrl,
+                    id,
+                    urls: link,
+                    date: 'N/A',
+                    content: content,
+                    contentAudio: contentAudio || null
+                });
+            } catch (error) {
+                console.error(`Error processing article: ${link}`);
+            }
+        }
+
+        financeNews = [...finalfinanceNewsData];
+        console.log(financeNews)
+        console.log('All finanace news data scraped successfully');
+    } catch (error) {
+        console.error('Error scraping Kantipur Finanace News.', error);
     } finally {
         if (browser) {
             await browser.close(); // Ensure the browser is closed to avoid memory leaks
@@ -218,7 +310,7 @@ async function scrapeTechnologyNews() {
                 const newsCard = element;
                 const title = newsCard.querySelector('.news_title a')?.textContent?.trim();
                 const link = newsCard.querySelector('.news_title a')?.getAttribute('href');
-                const fullLink = link;
+                const fullLink = [`${link}`];
                 const imageElement = newsCard.querySelector('.news_img a img');
                 let imageUrl = imageElement?.getAttribute('src') || imageElement?.getAttribute('data-src') || '';
                 const sourceImages = ['https://scontent.fktm10-1.fna.fbcdn.net/v/t39.30808-6/433005954_911798867617699_7228903362847666689_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=SM44t8_QDjwQ7kNvgGxWqTr&_nc_zt=23&_nc_ht=scontent.fktm10-1.fna&_nc_gid=Aspp8xLHzttCeesiEnitsI-&oh=00_AYAfQ5Lv3vNElusR9T-jVOgLrK5dkpmedC7R2SiWckq0eQ&oe=67190862'];
@@ -278,9 +370,9 @@ async function scrapeTechnologyNews() {
         }
         // console.log(finalTechNewsData)
         techNews = [...finalTechNewsData];
-        console.log('All sports news data scraped successfully');
+        console.log('All tech news data scraped successfully');
     } catch (error) {
-        console.error('Error scraping Kantipur Sports News.', error);
+        console.error('Error scraping Tech News.', error);
     } finally {
         if (browser) {
             await browser.close();
@@ -312,12 +404,114 @@ async function scrapeRashifal() {
     }
 };
 
+async function scrapeNepse() {
+    console.log('Scraping Nepse Data...');
+    const browser = await launchPuppeteer();
+
+    try {
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36');
+
+        await page.goto('https://nepalstock.com/', {
+            waitUntil: 'networkidle2',
+            timeout: 0,
+        });
+
+        const nepseData = await page.evaluate(() => {
+            const data = [];
+            const elements = document.querySelectorAll('.index__points');
+            elements.forEach((element) => {
+                const nepseIndex = element.querySelector('.index__points--number span')?.textContent?.trim() || '';
+                const totalTurnoverText = element.querySelector('.index__points--summary span')?.textContent?.trim() || '';
+                const totalTradedShareText = element.querySelector('.index__points--summary span:nth-child(2)')?.textContent?.trim() || '';
+
+                const totalTurnover = totalTurnoverText.match(/[\d,]+\.\d+/)?.[0] || '';
+                const totalTradedShare = totalTradedShareText.match(/[\d,]+/)?.[0] || '';
+
+                const nepseChangeValue = element.querySelector('.index__points--number .index__points--index .index__points--change')?.textContent?.trim() || '';
+                const nepseChangePer = element.querySelector('.index__points--number .index__points--index .index__points--changepercent')?.textContent?.trim() || '';
+
+                data.push({
+                    nepseIndex,
+                    totalTurnover,
+                    totalTradedShare,
+                    nepseChangeValue,
+                    nepseChangePer,
+                });
+            });
+            return data;
+        });
+
+        console.log(nepseData);
+        console.log('Nepse data scraped successfully');
+        nepse = nepseData;
+        await browser.close();
+    } catch (error) {
+        console.error('Error scraping Nepse data with Puppeteer:', error.message);
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
+}
+
+async function scrapeGold() {
+    console.log('Scraping Gold data...');
+    const browser = await launchPuppeteer();
+    try {
+
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36');
+
+        await page.goto('https://www.fenegosida.org/', {
+            waitUntil: 'networkidle2',
+            timeout: 0,
+        });
+
+        const goldData = await page.evaluate(() => {
+            const data = [];
+            const fineGold = document.querySelectorAll('.rate-gold.post:nth-child(1) b')[1]?.textContent.trim() || null;
+            const silver = document.querySelectorAll('.rate-silver.post b')[1]?.textContent.trim() || null;
+
+            const day = document.querySelector('.rate-date-day')?.textContent.trim() || '';
+            const month = document.querySelector('.rate-date-month')?.textContent.trim() || '';
+            const year = document.querySelector('.rate-date-year')?.textContent.trim() || '';
+
+            const date = `${day} ${month}, ${year}`;
+
+            data.push({
+                fineGold,
+                silver,
+                date
+            });
+
+            return data;
+        });
+
+        await browser.close();
+        console.log(goldData);
+        console.log('Gold data scraped successfully');
+        gold = goldData;
+
+    } catch (error) {
+        console.error('Error scraping Gold data:');
+        console.log(gold);
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
+}
+
 async function runScrapingFunctionsSequentially() {
     try {
-        await scrapeRashifal();          
-        await scrapeNews();              
-        await scrapeKantipurSportNews(); 
-        await scrapeTechnologyNews();    
+        await scrapeRashifal();
+        // await scrapeNews();
+        // await scrapeKantipurSportNews();
+        // await scrapeTechnologyNews();
+        // await scrapeKantipurFinanceNews();
+        await scrapeNepse();
+        await scrapeGold();
     } catch (error) {
         console.error('Error in scraping:', error);
     }
@@ -330,10 +524,16 @@ module.exports = {
     scrapeNews,
     scrapeKantipurSportNews,
     scrapeTechnologyNews,
+    scrapeKantipurFinanceNews,
     scrapeRashifal,
+    scrapeGold,
+    scrapeNepse,
     getAllNewsData: () => newsData,
     getSportsNewsData: () => sportNews,
     getTechNewsData: () => techNews,
+    getFinanceNewsData: () => financeNews,
     getRashifalData: () => rashifal,
+    getNepseData: () => nepse,
+    getGoldData: () => gold,
     selfPushedNewsData,
 };

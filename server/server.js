@@ -3,11 +3,12 @@ const cors = require('cors');
 const compression = require('compression');
 const bodyParser = require('body-parser');
 const cron = require('node-cron');
-const { scrapeNews, scrapeRashifal, scrapeKantipurSportNews, scrapeTechnologyNews } = require('./services/scraper');
+const { scrapeNews, scrapeRashifal, scrapeKantipurSportNews, scrapeTechnologyNews, scrapeKantipurFinanceNews } = require('./services/scraper');
 const newsRoutes = require('./routes/allNews');
 const rashifalRoutes = require('./routes/rashifal');
 const sportsRoutes = require('./routes/sportsNews');
 const techRoutes = require('./routes/techNews')
+const financeRoutes = require('./routes/financeNews')
 const ttsRoutes = require('./routes/ttsRoutes');
 const paraphraseRoutes = require('./routes/paraphaser');
 
@@ -27,6 +28,7 @@ app.use('/api', newsRoutes);
 app.use('/api/rashifal', rashifalRoutes);
 app.use('/api/sports', sportsRoutes);
 app.use('/api/tech', techRoutes);
+app.use('/api/finance', financeRoutes);
 app.use('/api/tts', ttsRoutes);
 app.use('/api/paraphrase', paraphraseRoutes);
 
@@ -36,6 +38,7 @@ async function runScrapingFunctionsSequentially() {
         await scrapeNews();
         await scrapeKantipurSportNews();
         await scrapeTechnologyNews();
+        await scrapeKantipurFinanceNews();
     } catch (error) {
         console.error('Error in scraping:', error);
     }
