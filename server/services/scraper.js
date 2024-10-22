@@ -278,7 +278,7 @@ async function scrapeKantipurFinanceNews() {
         }
 
         financeNews = [...finalfinanceNewsData];
-        console.log(financeNews)
+        // console.log(financeNews)
         console.log('All finanace news data scraped successfully');
     } catch (error) {
         console.error('Error scraping Kantipur Finanace News.', error);
@@ -442,7 +442,7 @@ async function scrapeNepse() {
             return data;
         });
 
-        console.log(nepseData);
+        // console.log(nepseData);
         console.log('Nepse data scraped successfully');
         nepse = nepseData;
         await browser.close();
@@ -489,13 +489,13 @@ async function scrapeGold() {
         });
 
         await browser.close();
-        console.log(goldData);
+        // console.log(goldData);
         console.log('Gold data scraped successfully');
         gold = goldData;
 
     } catch (error) {
         console.error('Error scraping Gold data:');
-        console.log(gold);
+        // console.log(gold);
     } finally {
         if (browser) {
             await browser.close();
@@ -506,10 +506,10 @@ async function scrapeGold() {
 async function runScrapingFunctionsSequentially() {
     try {
         await scrapeRashifal();
-        // await scrapeNews();
-        // await scrapeKantipurSportNews();
-        // await scrapeTechnologyNews();
-        // await scrapeKantipurFinanceNews();
+        await scrapeNews();
+        await scrapeKantipurSportNews();
+        await scrapeTechnologyNews();
+        await scrapeKantipurFinanceNews();
         await scrapeNepse();
         await scrapeGold();
     } catch (error) {
