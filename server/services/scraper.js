@@ -365,7 +365,7 @@ async function scrapeTechnologyNews() {
                     contentAudio: contentAudio || null
                 });
             } catch (error) {
-                console.error(`Error processing article: ${link}`, error);
+                console.error(`Error processing article: ${link}`);
             }
         }
         // console.log(finalTechNewsData)
