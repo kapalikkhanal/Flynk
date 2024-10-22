@@ -5,7 +5,7 @@ const getRashifal = async (req, res) => {
         let rashifal = getRashifalData();
         let gold = getGoldData();
         console.log('Gold', gold)
-        let nepse = getNepseData();
+        let nepse = getNepseData(); 
 
         if (rashifal.length === 0) {
             console.log('Rashifal data is empty, scraping again.');
